@@ -300,8 +300,8 @@
         }
 
         .mode-option.active {
-            border-color: var(--success);
-            background: rgba(44, 182, 125, 0.1);
+            border-color: var(--pink);
+            background: rgba(255, 46, 136, 0.1);
         }
 
         .mode-option h3 {
@@ -739,14 +739,16 @@ The model learns to predict the next token.</pre>
                         </div>
                         <div>
                             <label>Reserved Keywords</label>
-                            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <div style="display: flex; gap: 10px;">
                                 <input type="text" id="newKeyword" placeholder="Add keyword..." style="flex: 1;">
                                 <button class="secondary" onclick="addKeyword()" style="padding: 8px 16px;">Add</button>
                             </div>
-                            <button class="secondary" onclick="addChatMLKeywords()" style="padding: 6px 12px; font-size: 0.8rem;">+ ChatML Tokens</button>
                         </div>
                     </div>
                     <div class="reserved-keywords" id="keywordsList"></div>
+                    <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                        <button class="secondary" onclick="addChatMLKeywords()" style="padding: 6px 12px; font-size: 0.8rem;">+ ChatML Tokens</button>
+                    </div>
                 </section>
 
                 <!-- Training Hyperparameters -->
@@ -1517,7 +1519,7 @@ The model learns to predict the next token.</pre>
             }
 
             addChatMLKeywords() {
-                const chatMLKeywords = ['<|user|>', '<|assistant|>', '<|system|>', '<|end|>', '<|pad|>', '<|think|>', '<|/think|>'];
+                const chatMLKeywords = ['<|user|>', '<|assistant|>', '<|system|>', '<|end|>', '<|pad|>', '<|think|>, <|endoftext|>'];
                 for (let i = 0; i < chatMLKeywords.length; i++) {
                     this.addKeyword(chatMLKeywords[i]);
                 }

@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini GPT Trainer</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg:#0a0a0f;
+            --bg-2:#0e0e16;
+            --panel:#12121c;
+            --panel-2:#171726;
+            --text:#e9e9f2;
+            --muted:#a5a7bf;
+            --line:#1e1e2e;
+            --pink:#ff2e88;
+            --pink-2:#ff86c3;
+            --glow: 0 0 .5rem var(--pink), 0 0 1.25rem color-mix(in oklab, var(--pink) 70%, white 0%), 0 0 2.5rem color-mix(in oklab, var(--pink) 35%, black 65%);
+            --radius:16px;
+            --pad: clamp(14px, 1.6vw, 22px);
+            --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+            --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            --accent:#ff2e88;
+            --accent-strong:#ff86c3;
+            --danger:#ff5470;
+            --success:#2cb67d;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: var(--font);
+            color: var(--text);
+            background:
+                radial-gradient(1200px 520px at 50% -160px, rgba(255,46,136,.12), transparent 75%),
+                linear-gradient(180deg, #090914 0%, #050509 45%, #030306 75%, #020203 100%);
+            background-color: #020203;
+            background-repeat: no-repeat;
+            background-size: 130% 70%, 100% 100%;
+            background-position: center top, center top;
+            background-attachment: fixed;
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image: linear-gradient(rgba(255,255,255,.03), rgba(255,255,255,0) 2px);
+            background-size: 100% 3px;
+            mix-blend-mode: overlay;
+            opacity: .25;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            body::before { display: none; }
+            * { animation: none !important; transition: none !important; }
+        }
+
+        .container {
+            width: min(1000px, 92vw);
+            margin-inline: auto;
+        }
+
+        header {
+            background: linear-gradient(180deg, #131321, #11111c);
+            border-bottom: 1px solid var(--line);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-weight: 900;
+            font-size: 1.25rem;
+            color: var(--text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo .pink {
+            color: var(--pink);
+            text-shadow: var(--glow);
+        }
+
+        .back-btn {
+            appearance: none;
+            border: 1px solid color-mix(in oklab, var(--pink) 35%, #ffffff00 65%);
+            color: var(--text);
+            background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+            padding: .45rem .85rem;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.9rem;
+            transition: transform .12s ease, box-shadow .15s ease;
+        }
+
+        .back-btn:hover {
+            box-shadow: var(--glow);
+            transform: translateY(-1px);
+        }
+
+        .tool-article {
+            background: linear-gradient(180deg, #131321, #11111c);
+            border: 1px solid #222238;
+            border-radius: var(--radius);
+            padding: 2.5rem;
+            margin: 2.5rem 0 4rem;
+            box-shadow: 0 18px 50px rgba(0,0,0,.45), 0 0 60px -10px rgba(255,46,136,.15);
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .tool-header h1 {
+            font-size: clamp(2.75rem, 5vw, 3.5rem);
+            line-height: 1.1;
+            font-weight: 900;
+            margin: 0 0 0.75rem;
+            background: linear-gradient(135deg, var(--text) 0%, var(--pink) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tool-header .tool-meta {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--pink-2);
+            margin-bottom: 0.5rem;
+        }
+
+        .tool-header .tool-blurb {
+            color: #d9d9ec;
+            font-size: 1.1rem;
+            margin: 0;
+            max-width: 720px;
+        }
+
+        .tool-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+
+        .panel {
+            background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 80%, black 20%), var(--panel-2));
+            border: 1px solid color-mix(in oklab, var(--pink) 12%, #1f1f2c 88%);
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45);
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--muted);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .controls-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 700px) {
+            .controls-grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 500px) {
+            .controls-grid-4 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            color: var(--muted);
+        }
+
+        .label-with-tooltip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .label-with-tooltip label {
+            margin-bottom: 0;
+        }
+
+        .tooltip-trigger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            background: var(--line);
+            border-radius: 50%;
+            font-size: 0.7rem;
+            color: var(--muted);
+            cursor: help;
+            position: relative;
+            font-family: var(--mono);
+            font-weight: 700;
+        }
+
+        .tooltip-trigger:hover {
+            background: var(--pink);
+            color: var(--bg);
+        }
+
+        .tooltip-trigger .tooltip-text {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg);
+            border: 1px solid var(--pink);
+            color: var(--text);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 400;
+            width: 200px;
+            text-align: left;
+            line-height: 1.4;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            transition: opacity 0.2s, visibility 0.2s;
+        }
+
+        .tooltip-trigger .tooltip-text::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: var(--pink);
+        }
+
+        .tooltip-trigger:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid #2a2a3e;
+            background: #0f0f1b;
+            color: var(--text);
+            padding: 12px 14px;
+            font: inherit;
+            font-family: var(--mono);
+            outline: none;
+            transition: border 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            border-color: var(--pink);
+            box-shadow: 0 0 0 1px color-mix(in oklab, var(--pink) 50%, transparent);
+        }
+
+        button {
+            font: inherit;
+            border: none;
+            border-radius: 999px;
+            padding: 12px 24px;
+            cursor: pointer;
+            background: linear-gradient(120deg, var(--pink), var(--pink-2));
+            color: #050509;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--glow);
+        }
+
+        button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .button-row button.secondary {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--text);
+        }
+
+        button.success {
+            background: linear-gradient(120deg, var(--success), color-mix(in oklab, var(--success) 70%, white));
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 500px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .stat-box {
+            background: #0f0f1b;
+            border: 1px solid #2a2a3e;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: var(--mono);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--pink);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .progress-container {
+            margin-top: 14px;
+            padding: 14px 18px;
+            background: rgba(13, 19, 32, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            font-family: var(--mono);
+            display: none;
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .progress-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--pink), var(--pink-2));
+            width: 0%;
+            border-radius: inherit;
+            transition: width 0.2s ease;
+        }
+
+        .log-output {
+            background: #0d0d1a;
+            border-radius: 14px;
+            border: 1px solid #23233a;
+            padding: 18px;
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            max-height: 300px;
+            overflow-y: auto;
+            line-height: 1.5;
+            color: #cfd6ff;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.35);
+        }
+
+        .log-output .log-info { color: var(--muted); }
+        .log-output .log-success { color: var(--success); }
+        .log-output .log-warning { color: #ffdd00; }
+        .log-output .log-sample { color: var(--pink-2); }
+        .log-output .log-dim { color: var(--muted); }
+
+        .gen-playground {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 16px;
+            align-items: end;
+        }
+
+        .gen-playground .gen-length {
+            width: 100px;
+        }
+
+        .gen-playground .gen-btn-wrap button {
+            width: 100%;
+        }
+
+        @media (max-width: 500px) {
+            .gen-playground {
+                grid-template-columns: 1fr;
+            }
+            .gen-playground .gen-length,
+            .gen-playground .gen-btn-wrap {
+                width: 100%;
+            }
+        }
+
+        .gen-output {
+            min-height: 120px;
+            border-radius: 14px;
+            border: 1px solid #222238;
+            background: #090914;
+            padding: 18px;
+            font-family: var(--mono);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-top: 16px;
+        }
+
+        .gen-output .prompt {
+            color: var(--pink);
+        }
+
+        .gen-output .generated {
+            color: var(--success);
+        }
+
+        footer {
+            border-top: 1px solid var(--line);
+            background: #0a0a12;
+            color: var(--muted);
+            padding: 1rem 0 1.5rem;
+            font-size: 0.875rem;
+            margin-top: 4rem;
+        }
+
+        footer a {
+            color: var(--pink-2);
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255, 134, 195, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        footer a:hover {
+            color: var(--pink);
+            border-bottom-color: var(--pink);
+            text-shadow: 0 0 8px rgba(255, 46, 136, 0.4);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden { display: none; }
+
+        @media (max-width: 768px) {
+            .tool-article { padding: 1.5rem; }
+            nav { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <a href="index.html" class="logo">
+                The Gift of <span class="pink">Gab</span>
+            </a>
+            <a href="blog_attention.html" class="back-btn">Back to Blog</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <article class="tool-article">
+            <div class="tool-sections">
+                <!-- Training Data -->
+                <section class="panel">
+                    <div class="section-title">Training Data</div>
+                    <div>
+                        <label for="trainingText">Paste text to train on</label>
+                        <textarea id="trainingText">The cat sat on the mat. The dog sat on the log.
+The cat chased the mouse. The dog chased the cat.
+The mouse ran away. The cat ran after the mouse.
+The dog watched the cat chase the mouse.
+In the morning the sun rises in the east.
+In the evening the sun sets in the west.
+The birds sing in the morning. The owls hoot at night.
+Stars twinkle in the night sky. The moon glows bright.
+The quick brown fox jumps over the lazy dog.
+The lazy dog sleeps all day. The quick fox hunts at night.</textarea>
+                    </div>
+                </section>
+
+                <!-- Model Architecture -->
+                <section class="panel">
+                    <div class="section-title">Model Architecture</div>
+                    <div class="controls-grid-4">
+                        <div>
+                            <div class="label-with-tooltip">
+                                <label for="embeddingDim">Embed Dim</label>
+                                <span class="tooltip-trigger">?<span class="tooltip-text">Size of token embedding vectors. Larger = more expressive but slower. Must be divisible by number of heads.</span></span>
+                            </div>
+                            <input type="number" id="embeddingDim" value="32" min="8" max="128">
+                        </div>
+                        <div>
+                            <div class="label-with-tooltip">
+                                <label for="numHeads">Heads</label>
+                                <span class="tooltip-trigger">?<span class="tooltip-text">Number of attention heads. Each head learns different relationship patterns. Embed dim must be divisible by this.</span></span>
+                            </div>
+                            <input type="number" id="numHeads" value="4" min="1" max="8">
+                        </div>
+                        <div>
+                            <div class="label-with-tooltip">
+                                <label for="numBlocks">Blocks</label>
+                                <span class="tooltip-trigger">?<span class="tooltip-text">Number of transformer blocks stacked. More blocks = deeper network, can learn more complex patterns.</span></span>
+                            </div>
+                            <input type="number" id="numBlocks" value="2" min="1" max="6">
+                        </div>
+                        <div>
+                            <div class="label-with-tooltip">
+                                <label for="maxSeqLength">Max Seq Len</label>
+                                <span class="tooltip-trigger">?<span class="tooltip-text">Maximum sequence length the model can handle. Limits context window and positional embeddings.</span></span>
+                            </div>
+                            <input type="number" id="maxSeqLength" value="64" min="16" max="256">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Training Parameters -->
+                <section class="panel">
+                    <div class="section-title">Training Parameters</div>
+                    <div class="controls-grid-4">
+                        <div>
+                            <div class="label-with-tooltip">
+                                <label for="epochs">Epochs</label>
+                                <span class="tooltip-trigger">?<span class="tooltip-text">Number of complete passes through the training data. More epochs = more learning, but risk of overfitting.</span></span>
+                            </div>
+                            <input type="number" id="epochs" value="100" min="10" max="500">
+                        </div>
+                        <div>
+                            <div class="label-with-tooltip">
+                                <label for="learningRate">Learn Rate</label>
+                                <span class="tooltip-trigger">?<span class="tooltip-text">How much to adjust weights each step. Too high = unstable, too low = slow learning.</span></span>
+                            </div>
+                            <input type="number" id="learningRate" value="0.01" min="0.001" max="0.1" step="0.001">
+                        </div>
+                        <div>
+                            <div class="label-with-tooltip">
+                                <label for="sequenceLength">Seq Length</label>
+                                <span class="tooltip-trigger">?<span class="tooltip-text">Training context window size. Slide step is automatically set to half this value.</span></span>
+                            </div>
+                            <input type="number" id="sequenceLength" value="16" min="2" max="64">
+                        </div>
+                        <div>
+                            <div class="label-with-tooltip">
+                                <label for="numMerges">BPE Merges</label>
+                                <span class="tooltip-trigger">?<span class="tooltip-text">Number of BPE token merges. More merges = smaller vocabulary of larger tokens, better compression.</span></span>
+                            </div>
+                            <input type="number" id="numMerges" value="50" min="10" max="200">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Controls -->
+                <section class="panel">
+                    <div class="section-title">Controls</div>
+                    <div class="button-row">
+                        <button id="trainBtn">Start Training</button>
+                    </div>
+
+                    <div id="statsGrid" class="stats-grid hidden">
+                        <div class="stat-box">
+                            <div id="vocabStat" class="stat-value">--</div>
+                            <div class="stat-label">Vocab Size</div>
+                        </div>
+                        <div class="stat-box">
+                            <div id="tokensStat" class="stat-value">--</div>
+                            <div class="stat-label">Tokens</div>
+                        </div>
+                        <div class="stat-box">
+                            <div id="paramsStat" class="stat-value">--</div>
+                            <div class="stat-label">Parameters</div>
+                        </div>
+                    </div>
+
+                    <div id="progressContainer" class="progress-container">
+                        <div class="progress-meta">
+                            <span id="progressText">Epoch 0 / 100</span>
+                            <span id="lossText">Loss: --</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-bar-fill"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Log -->
+                <section class="panel">
+                    <div class="section-title">Training Log</div>
+                    <div id="logOutput" class="log-output">Ready to train...</div>
+                </section>
+
+                <!-- Generate -->
+                <section class="panel">
+                    <div class="section-title">Generate Text</div>
+                    <div class="gen-playground">
+                        <div>
+                            <label for="prompt">Prompt</label>
+                            <input type="text" id="prompt" value="The cat " placeholder="Enter a prompt...">
+                        </div>
+                        <div class="gen-length">
+                            <label for="maxTokens">Tokens</label>
+                            <input type="number" id="maxTokens" value="20" min="5" max="100">
+                        </div>
+                        <div class="gen-btn-wrap">
+                            <label>&nbsp;</label>
+                            <button id="generateBtn" disabled>Generate</button>
+                        </div>
+                    </div>
+                    <div id="generationOutput" class="gen-output">Train the model first, then generate text...</div>
+                </section>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div>&copy; 2025 <a href="https://gabormakesgames.com/">Gabor Szauer</a></div>
+        </div>
+    </footer>
+
+<script>
+// ==========================================
+// Mini ChatGPT - Complete Implementation
+// ==========================================
+
+class Neuron {
+    weights = null;
+    bias = null;
+
+    constructor(numberOfInputs) {
+        this.weights = new Array(numberOfInputs);
+        for (let i = 0; i < numberOfInputs; i++) {
+            this.weights[i] = Math.random() * 2 - 1;
+        }
+        this.bias = Math.random() * 2 - 1;
+    }
+
+    forward(inputs) {
+        let sum = 0;
+        for (let i = 0; i < inputs.length; i++) {
+            sum += this.weights[i] * inputs[i];
+        }
+        return sum + this.bias;
+    }
+
+    backward(inputs, neuronGradient, learningRate) {
+        const inputGradients = new Array(this.weights.length);
+        for (let i = 0; i < this.weights.length; i++) {
+            inputGradients[i] = neuronGradient * this.weights[i];
+            this.weights[i] -= learningRate * neuronGradient * inputs[i];
+        }
+        this.bias -= learningRate * neuronGradient;
+        return inputGradients;
+    }
+}
+
+class DenseLayer {
+    neurons = null;
+    cachedInput = null;
+
+    constructor(numberOfInputs, numberOfOutputs) {
+        this.neurons = new Array(numberOfOutputs);
+        for (let i = 0; i < numberOfOutputs; i++) {
+            this.neurons[i] = new Neuron(numberOfInputs);
+        }
+    }
+
+    forward(inputs) {
+        this.cachedInput = new Array(inputs.length);
+        for (let i = 0; i < inputs.length; i++) {
+            this.cachedInput[i] = inputs[i];
+        }
+        const outputs = new Array(this.neurons.length);
+        for (let i = 0; i < this.neurons.length; i++) {
+            outputs[i] = this.neurons[i].forward(inputs);
+        }
+        return outputs;
+    }
+
+    backward(outputGradients, learningRate) {
+        const inputGradients = new Array(this.cachedInput.length);
+        for (let i = 0; i < inputGradients.length; i++) {
+            inputGradients[i] = 0;
+        }
+        for (let neuronIdx = 0; neuronIdx < this.neurons.length; neuronIdx++) {
+            const neuron = this.neurons[neuronIdx];
+            const neuronsInputGradients = neuron.backward(this.cachedInput, outputGradients[neuronIdx], learningRate);
+            for (let i = 0; i < neuronsInputGradients.length; i++) {
+                inputGradients[i] += neuronsInputGradients[i];
+            }
+        }
+        return inputGradients;
+    }
+}
+
+class ActivationLayer {
+    type = "relu";
+    cachedInput = null;
+
+    constructor(layerType = "relu") {
+        this.type = layerType;
+    }
+
+    #reluActivation(x) { return Math.max(0, x); }
+    #sigmoidActivation(x) { return 1 / (1 + Math.exp(-x)); }
+    #tanhActivation(x) { return Math.tanh(x); }
+    #geluActivation(x) {
+        const c = Math.sqrt(2 / Math.PI);
+        return 0.5 * x * (1 + Math.tanh(c * (x + 0.044715 * x * x * x)));
+    }
+
+    #reluDerivative(x) { return x > 0 ? 1 : 0; }
+    #sigmoidDerivative(x) {
+        const sig = this.#sigmoidActivation(x);
+        return sig * (1 - sig);
+    }
+    #tanhDerivative(x) {
+        const t = Math.tanh(x);
+        return 1 - t * t;
+    }
+    #geluDerivative(x) {
+        const c = Math.sqrt(2 / Math.PI);
+        const x3 = x * x * x;
+        const inner = c * (x + 0.044715 * x3);
+        const tanhInner = Math.tanh(inner);
+        const sech2 = 1 - tanhInner * tanhInner;
+        const innerDeriv = c * (1 + 3 * 0.044715 * x * x);
+        return 0.5 * (1 + tanhInner) + 0.5 * x * sech2 * innerDeriv;
+    }
+
+    forward(inputs) {
+        this.cachedInput = [...inputs];
+        const output = new Array(inputs.length);
+        if (this.type === "relu") {
+            for (let i = 0; i < inputs.length; i++) output[i] = this.#reluActivation(inputs[i]);
+        } else if (this.type === "sigmoid") {
+            for (let i = 0; i < inputs.length; i++) output[i] = this.#sigmoidActivation(inputs[i]);
+        } else if (this.type === "tanh") {
+            for (let i = 0; i < inputs.length; i++) output[i] = this.#tanhActivation(inputs[i]);
+        } else if (this.type === "gelu") {
+            for (let i = 0; i < inputs.length; i++) output[i] = this.#geluActivation(inputs[i]);
+        }
+        return output;
+    }
+
+    backward(outputGradients) {
+        const inputGradients = new Array(outputGradients.length);
+        if (this.type === "relu") {
+            for (let i = 0; i < outputGradients.length; i++) inputGradients[i] = outputGradients[i] * this.#reluDerivative(this.cachedInput[i]);
+        } else if (this.type === "sigmoid") {
+            for (let i = 0; i < outputGradients.length; i++) inputGradients[i] = outputGradients[i] * this.#sigmoidDerivative(this.cachedInput[i]);
+        } else if (this.type === "tanh") {
+            for (let i = 0; i < outputGradients.length; i++) inputGradients[i] = outputGradients[i] * this.#tanhDerivative(this.cachedInput[i]);
+        } else if (this.type === "gelu") {
+            for (let i = 0; i < outputGradients.length; i++) inputGradients[i] = outputGradients[i] * this.#geluDerivative(this.cachedInput[i]);
+        }
+        return inputGradients;
+    }
+}
+
+class Loss {
+    static crossEntropy(predictions, targetTokens) {
+        let totalLoss = 0;
+        for (let t = 0; t < predictions.length; t++) {
+            const probs = predictions[t];
+            const targetToken = targetTokens[t];
+            const epsilon = 1e-10;
+            totalLoss += -Math.log(probs[targetToken] + epsilon);
+        }
+        return totalLoss / predictions.length;
+    }
+}
+
+class Tokenizer {
+    merges = new Map();
+    vocabulary = new Map();
+    nextTokenId = 256;
+
+    constructor() {
+        for (let i = 0; i < 256; i++) {
+            this.vocabulary.set(i, [i]);
+        }
+    }
+
+    #stringToBytes(text) {
+        const encoder = new TextEncoder();
+        const uint8Array = encoder.encode(text);
+        const bytes = [];
+        for (let i = 0; i < uint8Array.length; i++) bytes.push(uint8Array[i]);
+        return bytes;
+    }
+
+    #bytesToString(bytes) {
+        return new TextDecoder().decode(new Uint8Array(bytes));
+    }
+
+    #makeMerge(token1, token2) {
+        const mergeKey = `${token1},${token2}`;
+        const existingMerge = this.merges.get(mergeKey);
+        if (existingMerge !== undefined) return existingMerge;
+        const newTokenId = this.nextTokenId++;
+        this.merges.set(mergeKey, newTokenId);
+        const token1Bytes = this.vocabulary.get(token1);
+        const token2Bytes = this.vocabulary.get(token2);
+        const newTokenBytes = [...token1Bytes, ...token2Bytes];
+        this.vocabulary.set(newTokenId, newTokenBytes);
+        return newTokenId;
+    }
+
+    #applyMerge(tokens, token1, token2, mergedTokenId) {
+        const result = [];
+        let i = 0;
+        while (i < tokens.length) {
+            if (i < tokens.length - 1 && tokens[i] === token1 && tokens[i + 1] === token2) {
+                result.push(mergedTokenId);
+                i += 2;
+            } else {
+                result.push(tokens[i]);
+                i += 1;
+            }
+        }
+        return result;
+    }
+
+    #findMostFrequentPair(tokensList) {
+        const pairCounts = new Map();
+        for (let i = 0; i < tokensList.length - 1; i++) {
+            const pair = `${tokensList[i]},${tokensList[i + 1]}`;
+            const currentCount = pairCounts.get(pair) || 0;
+            pairCounts.set(pair, currentCount + 1);
+        }
+        let maxCount = 0;
+        let mostFrequentPair = null;
+        for (const [pair, count] of pairCounts) {
+            if (count > maxCount) {
+                maxCount = count;
+                mostFrequentPair = pair;
+            }
+        }
+        if (mostFrequentPair && maxCount > 1) {
+            const tokens = mostFrequentPair.split(',');
+            return [parseInt(tokens[0]), parseInt(tokens[1])];
+        }
+        return null;
+    }
+
+    train(trainingText, numMerges) {
+        let tokens = this.#stringToBytes(trainingText);
+        for (let mergeNum = 0; mergeNum < numMerges; mergeNum++) {
+            const pair = this.#findMostFrequentPair(tokens);
+            if (!pair) break;
+            const [token1, token2] = pair;
+            const newTokenId = this.#makeMerge(token1, token2);
+            tokens = this.#applyMerge(tokens, token1, token2, newTokenId);
+        }
+        return this.merges.size;
+    }
+
+    encode(textToEncode) {
+        let tokens = this.#stringToBytes(textToEncode);
+        for (const [mergeKey, mergedToken] of this.merges) {
+            const [token1, token2] = mergeKey.split(',').map(Number);
+            tokens = this.#applyMerge(tokens, token1, token2, mergedToken);
+        }
+        return tokens;
+    }
+
+    decode(tokensToDecode) {
+        const bytes = [];
+        for (let i = 0; i < tokensToDecode.length; i++) {
+            const token = tokensToDecode[i];
+            const tokenBytes = this.vocabulary.get(token);
+            if (tokenBytes) {
+                for (let j = 0; j < tokenBytes.length; j++) bytes.push(tokenBytes[j]);
+            } else {
+                throw new Error(`Unknown token: ${token}`);
+            }
+        }
+        return this.#bytesToString(bytes);
+    }
+
+    getVocabSize() { return this.vocabulary.size; }
+}
+
+class EmbeddingLayer {
+    weights = null;
+    vocabSize = 0;
+    embeddingDim = 0;
+    cachedInputTokens = null;
+
+    constructor(vocabSize, embeddingDim) {
+        this.vocabSize = vocabSize;
+        this.embeddingDim = embeddingDim;
+        const scale = Math.sqrt(1.0 / embeddingDim);
+        this.weights = new Array(vocabSize);
+        for (let i = 0; i < vocabSize; i++) {
+            this.weights[i] = new Array(embeddingDim);
+            for (let j = 0; j < embeddingDim; j++) {
+                this.weights[i][j] = (Math.random() * 2 - 1) * scale;
+            }
+        }
+    }
+
+    forward(inputTokens) {
+        this.cachedInputTokens = [...inputTokens];
+        const output = new Array(inputTokens.length);
+        for (let i = 0; i < inputTokens.length; i++) {
+            const tokenId = inputTokens[i];
+            output[i] = [...this.weights[tokenId]];
+        }
+        return output;
+    }
+
+    backward(outputGradients, learningRate) {
+        for (let i = 0; i < this.cachedInputTokens.length; i++) {
+            const tokenId = this.cachedInputTokens[i];
+            const gradient = outputGradients[i];
+            for (let j = 0; j < this.embeddingDim; j++) {
+                this.weights[tokenId][j] -= learningRate * gradient[j];
+            }
+        }
+        return null;
+    }
+}
+
+class OutputLayer {
+    weights = null;
+    bias = null;
+    hiddenSize = 0;
+    vocabSize = 0;
+    cachedInputs = null;
+    cachedOutputs = null;
+
+    constructor(hiddenSize, vocabSize) {
+        this.hiddenSize = hiddenSize;
+        this.vocabSize = vocabSize;
+        const scale = Math.sqrt(2.0 / (hiddenSize + vocabSize));
+        this.weights = new Array(hiddenSize);
+        for (let i = 0; i < hiddenSize; i++) {
+            this.weights[i] = new Array(vocabSize);
+            for (let j = 0; j < vocabSize; j++) {
+                this.weights[i][j] = (Math.random() * 2 - 1) * scale;
+            }
+        }
+        this.bias = new Array(vocabSize).fill(0);
+    }
+
+    #softmax(logits) {
+        let maxLogit = logits[0];
+        for (let i = 1; i < logits.length; i++) {
+            if (logits[i] > maxLogit) maxLogit = logits[i];
+        }
+        const expValues = new Array(logits.length);
+        let expSum = 0;
+        for (let i = 0; i < logits.length; i++) {
+            expValues[i] = Math.exp(logits[i] - maxLogit);
+            expSum += expValues[i];
+        }
+        const probabilities = new Array(logits.length);
+        for (let i = 0; i < logits.length; i++) {
+            probabilities[i] = expValues[i] / expSum;
+        }
+        return probabilities;
+    }
+
+    #createZeroMatrix(rows, cols) {
+        const matrix = new Array(rows);
+        for (let i = 0; i < rows; i++) {
+            matrix[i] = new Array(cols).fill(0);
+        }
+        return matrix;
+    }
+
+    forward(hiddenSequence) {
+        this.cachedInputs = hiddenSequence.map(h => [...h]);
+        this.cachedOutputs = new Array(hiddenSequence.length);
+        const outputs = new Array(hiddenSequence.length);
+        for (let t = 0; t < hiddenSequence.length; t++) {
+            const hidden = hiddenSequence[t];
+            const logits = new Array(this.vocabSize);
+            for (let v = 0; v < this.vocabSize; v++) {
+                let sum = this.bias[v];
+                for (let h = 0; h < this.hiddenSize; h++) {
+                    sum += hidden[h] * this.weights[h][v];
+                }
+                logits[v] = sum;
+            }
+            outputs[t] = this.#softmax(logits);
+            this.cachedOutputs[t] = outputs[t];
+        }
+        return outputs;
+    }
+
+    backward(targetTokens, learningRate) {
+        const sequenceLength = this.cachedInputs.length;
+        const hiddenGradients = new Array(sequenceLength);
+        const weightsGrad = this.#createZeroMatrix(this.hiddenSize, this.vocabSize);
+        const biasGrad = new Array(this.vocabSize).fill(0);
+
+        for (let t = 0; t < sequenceLength; t++) {
+            const hidden = this.cachedInputs[t];
+            const probs = this.cachedOutputs[t];
+            const targetToken = targetTokens[t];
+            const outputGrad = new Array(this.vocabSize);
+            for (let v = 0; v < this.vocabSize; v++) {
+                outputGrad[v] = v === targetToken ? probs[v] - 1 : probs[v];
+            }
+            for (let h = 0; h < this.hiddenSize; h++) {
+                for (let v = 0; v < this.vocabSize; v++) {
+                    weightsGrad[h][v] += outputGrad[v] * hidden[h];
+                }
+            }
+            for (let v = 0; v < this.vocabSize; v++) {
+                biasGrad[v] += outputGrad[v];
+            }
+            hiddenGradients[t] = new Array(this.hiddenSize);
+            for (let h = 0; h < this.hiddenSize; h++) {
+                let grad = 0;
+                for (let v = 0; v < this.vocabSize; v++) {
+                    grad += outputGrad[v] * this.weights[h][v];
+                }
+                hiddenGradients[t][h] = grad;
+            }
+        }
+        for (let h = 0; h < this.hiddenSize; h++) {
+            for (let v = 0; v < this.vocabSize; v++) {
+                this.weights[h][v] -= learningRate * weightsGrad[h][v];
+            }
+        }
+        for (let v = 0; v < this.vocabSize; v++) {
+            this.bias[v] -= learningRate * biasGrad[v];
+        }
+        return hiddenGradients;
+    }
+}
+
+class PositionalEmbeddingLayer {
+    tokenEmbedding = null;
+    positionWeights = null;
+    maxSequenceLength = 0;
+    embeddingDim = 0;
+    cachedLength = 0;
+
+    constructor(vocabSize, embeddingDim, maxSequenceLength) {
+        this.embeddingDim = embeddingDim;
+        this.maxSequenceLength = maxSequenceLength;
+        this.tokenEmbedding = new EmbeddingLayer(vocabSize, embeddingDim);
+        const scale = Math.sqrt(1.0 / embeddingDim);
+        this.positionWeights = new Array(maxSequenceLength);
+        for (let pos = 0; pos < maxSequenceLength; pos++) {
+            this.positionWeights[pos] = new Array(embeddingDim);
+            for (let d = 0; d < embeddingDim; d++) {
+                this.positionWeights[pos][d] = (Math.random() * 2 - 1) * scale;
+            }
+        }
+    }
+
+    forward(inputTokens) {
+        const tokenEmbeddings = this.tokenEmbedding.forward(inputTokens);
+        this.cachedLength = inputTokens.length;
+        const output = new Array(inputTokens.length);
+        for (let pos = 0; pos < inputTokens.length; pos++) {
+            output[pos] = new Array(this.embeddingDim);
+            for (let d = 0; d < this.embeddingDim; d++) {
+                output[pos][d] = tokenEmbeddings[pos][d] + this.positionWeights[pos][d];
+            }
+        }
+        return output;
+    }
+
+    backward(outputGradients, learningRate) {
+        for (let pos = 0; pos < this.cachedLength; pos++) {
+            for (let d = 0; d < this.embeddingDim; d++) {
+                this.positionWeights[pos][d] -= learningRate * outputGradients[pos][d];
+            }
+        }
+        this.tokenEmbedding.backward(outputGradients, learningRate);
+        return null;
+    }
+}
+
+class LayerNormalization {
+    gamma = null;
+    beta = null;
+    featureSize = 0;
+    epsilon = 1e-5;
+    cachedInputs = null;
+    cachedMean = null;
+    cachedVariance = null;
+    cachedNormalized = null;
+
+    constructor(featureSize) {
+        this.featureSize = featureSize;
+        this.gamma = new Array(featureSize).fill(1.0);
+        this.beta = new Array(featureSize).fill(0.0);
+    }
+
+    forward(inputs) {
+        const seqLength = inputs.length;
+        this.cachedInputs = inputs.map(row => [...row]);
+        this.cachedMean = new Array(seqLength);
+        this.cachedVariance = new Array(seqLength);
+        this.cachedNormalized = new Array(seqLength);
+        const outputs = new Array(seqLength);
+
+        for (let t = 0; t < seqLength; t++) {
+            let mean = 0;
+            for (let i = 0; i < this.featureSize; i++) mean += inputs[t][i];
+            mean /= this.featureSize;
+            this.cachedMean[t] = mean;
+            let variance = 0;
+            for (let i = 0; i < this.featureSize; i++) {
+                const diff = inputs[t][i] - mean;
+                variance += diff * diff;
+            }
+            variance /= this.featureSize;
+            this.cachedVariance[t] = variance;
+            const stdDev = Math.sqrt(variance + this.epsilon);
+            this.cachedNormalized[t] = new Array(this.featureSize);
+            outputs[t] = new Array(this.featureSize);
+            for (let i = 0; i < this.featureSize; i++) {
+                const normalized = (inputs[t][i] - mean) / stdDev;
+                this.cachedNormalized[t][i] = normalized;
+                outputs[t][i] = this.gamma[i] * normalized + this.beta[i];
+            }
+        }
+        return outputs;
+    }
+
+    backward(outputGradients, learningRate) {
+        const seqLength = outputGradients.length;
+        const inputGradients = new Array(seqLength);
+        const gammaGrad = new Array(this.featureSize).fill(0);
+        const betaGrad = new Array(this.featureSize).fill(0);
+
+        for (let t = 0; t < seqLength; t++) {
+            const mean = this.cachedMean[t];
+            const variance = this.cachedVariance[t];
+            const stdDev = Math.sqrt(variance + this.epsilon);
+            for (let i = 0; i < this.featureSize; i++) {
+                gammaGrad[i] += outputGradients[t][i] * this.cachedNormalized[t][i];
+                betaGrad[i] += outputGradients[t][i];
+            }
+            const dNormalized = new Array(this.featureSize);
+            for (let i = 0; i < this.featureSize; i++) {
+                dNormalized[i] = outputGradients[t][i] * this.gamma[i];
+            }
+            let dVariance = 0;
+            for (let i = 0; i < this.featureSize; i++) {
+                dVariance += dNormalized[i] * (this.cachedInputs[t][i] - mean);
+            }
+            dVariance *= -0.5 * Math.pow(variance + this.epsilon, -1.5);
+            let sumDiff = 0;
+            for (let i = 0; i < this.featureSize; i++) sumDiff += this.cachedInputs[t][i] - mean;
+            let dMean = 0;
+            for (let i = 0; i < this.featureSize; i++) {
+                dMean += dNormalized[i] * (-1.0 / stdDev);
+            }
+            dMean += dVariance * (-2.0 / this.featureSize) * sumDiff;
+            inputGradients[t] = new Array(this.featureSize);
+            for (let i = 0; i < this.featureSize; i++) {
+                inputGradients[t][i] = dNormalized[i] / stdDev + dVariance * 2.0 * (this.cachedInputs[t][i] - mean) / this.featureSize + dMean / this.featureSize;
+            }
+        }
+        for (let i = 0; i < this.featureSize; i++) {
+            this.gamma[i] -= learningRate * gammaGrad[i];
+            this.beta[i] -= learningRate * betaGrad[i];
+        }
+        return inputGradients;
+    }
+}
+
+class AttentionHead {
+    weightsQ = null;
+    weightsK = null;
+    weightsV = null;
+    embeddingDim = 0;
+    headDim = 0;
+    scale = 0;
+    cachedInputs = null;
+    cachedQ = null;
+    cachedK = null;
+    cachedV = null;
+    cachedScores = null;
+    cachedWeights = null;
+
+    constructor(embeddingDim, headDim) {
+        this.embeddingDim = embeddingDim;
+        this.headDim = headDim;
+        this.scale = Math.sqrt(headDim);
+        const initScale = Math.sqrt(2.0 / (embeddingDim + headDim));
+        this.weightsQ = this.#randomMatrix(embeddingDim, headDim, initScale);
+        this.weightsK = this.#randomMatrix(embeddingDim, headDim, initScale);
+        this.weightsV = this.#randomMatrix(embeddingDim, headDim, initScale);
+    }
+
+    #createMatrix(rows, cols, fillValue = 0) {
+        return Array.from({length: rows}, () => new Array(cols).fill(fillValue));
+    }
+
+    #randomMatrix(rows, cols, scale) {
+        return Array.from({length: rows}, () => Array.from({length: cols}, () => (Math.random() * 2 - 1) * scale));
+    }
+
+    #vectorMatrixMultiply(vector, matrix) {
+        const outputDim = matrix[0].length;
+        const result = new Array(outputDim);
+        for (let j = 0; j < outputDim; j++) {
+            let sum = 0;
+            for (let i = 0; i < vector.length; i++) sum += vector[i] * matrix[i][j];
+            result[j] = sum;
+        }
+        return result;
+    }
+
+    #dot(a, b) {
+        let sum = 0;
+        for (let i = 0; i < a.length; i++) sum += a[i] * b[i];
+        return sum;
+    }
+
+    #softmax(values) {
+        let max = values[0];
+        for (let i = 1; i < values.length; i++) if (values[i] > max) max = values[i];
+        const exp = new Array(values.length);
+        let sum = 0;
+        for (let i = 0; i < values.length; i++) {
+            exp[i] = Math.exp(values[i] - max);
+            sum += exp[i];
+        }
+        return exp.map(e => e / sum);
+    }
+
+    forward(inputs) {
+        const seqLen = inputs.length;
+        this.cachedInputs = inputs;
+        this.cachedQ = new Array(seqLen);
+        this.cachedK = new Array(seqLen);
+        this.cachedV = new Array(seqLen);
+        for (let i = 0; i < seqLen; i++) {
+            this.cachedQ[i] = this.#vectorMatrixMultiply(inputs[i], this.weightsQ);
+            this.cachedK[i] = this.#vectorMatrixMultiply(inputs[i], this.weightsK);
+            this.cachedV[i] = this.#vectorMatrixMultiply(inputs[i], this.weightsV);
+        }
+        this.cachedScores = this.#createMatrix(seqLen, seqLen);
+        for (let i = 0; i < seqLen; i++) {
+            for (let j = 0; j < seqLen; j++) {
+                this.cachedScores[i][j] = j > i ? -Infinity : this.#dot(this.cachedQ[i], this.cachedK[j]) / this.scale;
+            }
+        }
+        this.cachedWeights = new Array(seqLen);
+        for (let i = 0; i < seqLen; i++) this.cachedWeights[i] = this.#softmax(this.cachedScores[i]);
+        const outputs = new Array(seqLen);
+        for (let i = 0; i < seqLen; i++) {
+            outputs[i] = new Array(this.headDim).fill(0);
+            for (let d = 0; d < this.headDim; d++) {
+                for (let j = 0; j <= i; j++) outputs[i][d] += this.cachedWeights[i][j] * this.cachedV[j][d];
+            }
+        }
+        return outputs;
+    }
+
+    backward(outputGradients, learningRate) {
+        const seqLen = this.cachedInputs.length;
+        const weightsQGrad = this.#createMatrix(this.embeddingDim, this.headDim);
+        const weightsKGrad = this.#createMatrix(this.embeddingDim, this.headDim);
+        const weightsVGrad = this.#createMatrix(this.embeddingDim, this.headDim);
+        const inputGradients = Array.from({length: seqLen}, () => new Array(this.embeddingDim).fill(0));
+        const weightsGrad = this.#createMatrix(seqLen, seqLen);
+        const vGrad = Array.from({length: seqLen}, () => new Array(this.headDim).fill(0));
+
+        for (let i = 0; i < seqLen; i++) {
+            for (let j = 0; j <= i; j++) {
+                for (let d = 0; d < this.headDim; d++) {
+                    weightsGrad[i][j] += outputGradients[i][d] * this.cachedV[j][d];
+                    vGrad[j][d] += outputGradients[i][d] * this.cachedWeights[i][j];
+                }
+            }
+        }
+        const scoresGrad = this.#createMatrix(seqLen, seqLen);
+        for (let i = 0; i < seqLen; i++) {
+            for (let j = 0; j <= i; j++) {
+                for (let k = 0; k <= i; k++) {
+                    if (j === k) scoresGrad[i][j] += weightsGrad[i][k] * this.cachedWeights[i][j] * (1 - this.cachedWeights[i][j]);
+                    else scoresGrad[i][j] += weightsGrad[i][k] * (-this.cachedWeights[i][j] * this.cachedWeights[i][k]);
+                }
+            }
+        }
+        const qGrad = Array.from({length: seqLen}, () => new Array(this.headDim).fill(0));
+        const kGrad = Array.from({length: seqLen}, () => new Array(this.headDim).fill(0));
+        for (let i = 0; i < seqLen; i++) {
+            for (let j = 0; j <= i; j++) {
+                const scaledGrad = scoresGrad[i][j] / this.scale;
+                for (let d = 0; d < this.headDim; d++) {
+                    qGrad[i][d] += scaledGrad * this.cachedK[j][d];
+                    kGrad[j][d] += scaledGrad * this.cachedQ[i][d];
+                }
+            }
+        }
+        for (let i = 0; i < seqLen; i++) {
+            for (let d = 0; d < this.embeddingDim; d++) {
+                for (let h = 0; h < this.headDim; h++) {
+                    inputGradients[i][d] += qGrad[i][h] * this.weightsQ[d][h];
+                    weightsQGrad[d][h] += qGrad[i][h] * this.cachedInputs[i][d];
+                    inputGradients[i][d] += kGrad[i][h] * this.weightsK[d][h];
+                    weightsKGrad[d][h] += kGrad[i][h] * this.cachedInputs[i][d];
+                    inputGradients[i][d] += vGrad[i][h] * this.weightsV[d][h];
+                    weightsVGrad[d][h] += vGrad[i][h] * this.cachedInputs[i][d];
+                }
+            }
+        }
+        for (let d = 0; d < this.embeddingDim; d++) {
+            for (let h = 0; h < this.headDim; h++) {
+                this.weightsQ[d][h] -= learningRate * weightsQGrad[d][h];
+                this.weightsK[d][h] -= learningRate * weightsKGrad[d][h];
+                this.weightsV[d][h] -= learningRate * weightsVGrad[d][h];
+            }
+        }
+        return inputGradients;
+    }
+}
+
+class MultiHeadAttentionLayer {
+    heads = null;
+    outputProj = null;
+    numHeads = 0;
+    headDim = 0;
+    embeddingDim = 0;
+    cachedHeadOutputs = null;
+    cachedConcatenated = null;
+
+    constructor(embeddingDim, numHeads) {
+        if (embeddingDim % numHeads !== 0) throw new Error("embeddingDim must be divisible by numHeads");
+        this.embeddingDim = embeddingDim;
+        this.numHeads = numHeads;
+        this.headDim = embeddingDim / numHeads;
+        this.heads = new Array(numHeads);
+        for (let h = 0; h < numHeads; h++) this.heads[h] = new AttentionHead(embeddingDim, this.headDim);
+        this.outputProj = new DenseLayer(embeddingDim, embeddingDim);
+    }
+
+    forward(inputs) {
+        const seqLen = inputs.length;
+        this.cachedHeadOutputs = new Array(this.numHeads);
+        for (let h = 0; h < this.numHeads; h++) this.cachedHeadOutputs[h] = this.heads[h].forward(inputs);
+        this.cachedConcatenated = new Array(seqLen);
+        for (let i = 0; i < seqLen; i++) {
+            this.cachedConcatenated[i] = new Array(this.embeddingDim);
+            for (let h = 0; h < this.numHeads; h++) {
+                for (let d = 0; d < this.headDim; d++) {
+                    this.cachedConcatenated[i][h * this.headDim + d] = this.cachedHeadOutputs[h][i][d];
+                }
+            }
+        }
+        const outputs = new Array(seqLen);
+        for (let i = 0; i < seqLen; i++) outputs[i] = this.outputProj.forward(this.cachedConcatenated[i]);
+        return outputs;
+    }
+
+    backward(outputGradients, learningRate) {
+        const seqLen = outputGradients.length;
+        const concatenatedGrad = new Array(seqLen);
+        for (let i = 0; i < seqLen; i++) {
+            this.outputProj.forward(this.cachedConcatenated[i]);
+            concatenatedGrad[i] = this.outputProj.backward(outputGradients[i], learningRate);
+        }
+        const headGradients = new Array(this.numHeads);
+        for (let h = 0; h < this.numHeads; h++) {
+            headGradients[h] = new Array(seqLen);
+            for (let i = 0; i < seqLen; i++) {
+                headGradients[h][i] = new Array(this.headDim);
+                for (let d = 0; d < this.headDim; d++) {
+                    headGradients[h][i][d] = concatenatedGrad[i][h * this.headDim + d];
+                }
+            }
+        }
+        const inputGradients = Array.from({length: seqLen}, () => new Array(this.embeddingDim).fill(0));
+        for (let h = 0; h < this.numHeads; h++) {
+            const headInputGrad = this.heads[h].backward(headGradients[h], learningRate);
+            for (let i = 0; i < seqLen; i++) {
+                for (let d = 0; d < this.embeddingDim; d++) inputGradients[i][d] += headInputGrad[i][d];
+            }
+        }
+        return inputGradients;
+    }
+}
+
+class MLPBlock {
+    dense1 = null;
+    activation = null;
+    dense2 = null;
+    cachedInputs = null;
+    cachedHidden1 = null;
+    cachedHidden2 = null;
+
+    constructor(embeddingDim, expansionFactor = 4) {
+        const hiddenDim = embeddingDim * expansionFactor;
+        this.dense1 = new DenseLayer(embeddingDim, hiddenDim);
+        this.activation = new ActivationLayer("gelu");
+        this.dense2 = new DenseLayer(hiddenDim, embeddingDim);
+    }
+
+    forward(inputs) {
+        const seqLen = inputs.length;
+        this.cachedInputs = inputs;
+        this.cachedHidden1 = new Array(seqLen);
+        this.cachedHidden2 = new Array(seqLen);
+        const outputs = new Array(seqLen);
+        for (let t = 0; t < seqLen; t++) {
+            this.cachedHidden1[t] = this.dense1.forward(inputs[t]);
+            this.cachedHidden2[t] = this.activation.forward(this.cachedHidden1[t]);
+            outputs[t] = this.dense2.forward(this.cachedHidden2[t]);
+        }
+        return outputs;
+    }
+
+    backward(outputGradients, learningRate) {
+        const seqLen = outputGradients.length;
+        const inputGradients = new Array(seqLen);
+        for (let t = 0; t < seqLen; t++) {
+            this.dense1.cachedInput = this.cachedInputs[t];
+            this.activation.cachedInput = this.cachedHidden1[t];
+            this.dense2.cachedInput = this.cachedHidden2[t];
+            let grad = this.dense2.backward(outputGradients[t], learningRate);
+            grad = this.activation.backward(grad);
+            inputGradients[t] = this.dense1.backward(grad, learningRate);
+        }
+        return inputGradients;
+    }
+}
+
+class TransformerBlock {
+    layerNorm1 = null;
+    attention = null;
+    layerNorm2 = null;
+    mlp = null;
+    embeddingDim = 0;
+    cachedInput = null;
+    cachedPostAttention = null;
+
+    constructor(embeddingDim, numHeads, mlpExpansion = 4) {
+        this.embeddingDim = embeddingDim;
+        this.layerNorm1 = new LayerNormalization(embeddingDim);
+        this.attention = new MultiHeadAttentionLayer(embeddingDim, numHeads);
+        this.layerNorm2 = new LayerNormalization(embeddingDim);
+        this.mlp = new MLPBlock(embeddingDim, mlpExpansion);
+    }
+
+    forward(inputs) {
+        const seqLen = inputs.length;
+        this.cachedInput = inputs;
+        const normalized1 = this.layerNorm1.forward(inputs);
+        const attended = this.attention.forward(normalized1);
+        this.cachedPostAttention = new Array(seqLen);
+        for (let t = 0; t < seqLen; t++) {
+            this.cachedPostAttention[t] = new Array(this.embeddingDim);
+            for (let d = 0; d < this.embeddingDim; d++) {
+                this.cachedPostAttention[t][d] = inputs[t][d] + attended[t][d];
+            }
+        }
+        const normalized2 = this.layerNorm2.forward(this.cachedPostAttention);
+        const mlpOutput = this.mlp.forward(normalized2);
+        const outputs = new Array(seqLen);
+        for (let t = 0; t < seqLen; t++) {
+            outputs[t] = new Array(this.embeddingDim);
+            for (let d = 0; d < this.embeddingDim; d++) {
+                outputs[t][d] = this.cachedPostAttention[t][d] + mlpOutput[t][d];
+            }
+        }
+        return outputs;
+    }
+
+    backward(outputGradients, learningRate) {
+        const seqLen = outputGradients.length;
+        const mlpOutputGrad = outputGradients;
+        const postAttentionGrad1 = outputGradients;
+        const normalized2Grad = this.mlp.backward(mlpOutputGrad, learningRate);
+        const postAttentionGrad2 = this.layerNorm2.backward(normalized2Grad, learningRate);
+        const postAttentionGrad = new Array(seqLen);
+        for (let t = 0; t < seqLen; t++) {
+            postAttentionGrad[t] = new Array(this.embeddingDim);
+            for (let d = 0; d < this.embeddingDim; d++) {
+                postAttentionGrad[t][d] = postAttentionGrad1[t][d] + postAttentionGrad2[t][d];
+            }
+        }
+        const attendedGrad = postAttentionGrad;
+        const inputGrad1 = postAttentionGrad;
+        const normalized1Grad = this.attention.backward(attendedGrad, learningRate);
+        const inputGrad2 = this.layerNorm1.backward(normalized1Grad, learningRate);
+        const inputGradients = new Array(seqLen);
+        for (let t = 0; t < seqLen; t++) {
+            inputGradients[t] = new Array(this.embeddingDim);
+            for (let d = 0; d < this.embeddingDim; d++) {
+                inputGradients[t][d] = inputGrad1[t][d] + inputGrad2[t][d];
+            }
+        }
+        return inputGradients;
+    }
+}
+
+class ChatGPT {
+    embedding = null;
+    blocks = null;
+    finalNorm = null;
+    output = null;
+    vocabSize = 0;
+    embeddingDim = 0;
+    numBlocks = 0;
+
+    constructor(vocabSize, embeddingDim, numHeads, numBlocks, maxSeqLength) {
+        this.vocabSize = vocabSize;
+        this.embeddingDim = embeddingDim;
+        this.numBlocks = numBlocks;
+        this.embedding = new PositionalEmbeddingLayer(vocabSize, embeddingDim, maxSeqLength);
+        this.blocks = new Array(numBlocks);
+        for (let i = 0; i < numBlocks; i++) this.blocks[i] = new TransformerBlock(embeddingDim, numHeads);
+        this.finalNorm = new LayerNormalization(embeddingDim);
+        this.output = new OutputLayer(embeddingDim, vocabSize);
+    }
+
+    forward(inputTokens) {
+        let hidden = this.embedding.forward(inputTokens);
+        for (let i = 0; i < this.numBlocks; i++) hidden = this.blocks[i].forward(hidden);
+        hidden = this.finalNorm.forward(hidden);
+        return this.output.forward(hidden);
+    }
+
+    backward(targetTokens, learningRate) {
+        let gradients = this.output.backward(targetTokens, learningRate);
+        gradients = this.finalNorm.backward(gradients, learningRate);
+        for (let i = this.numBlocks - 1; i >= 0; i--) gradients = this.blocks[i].backward(gradients, learningRate);
+        this.embedding.backward(gradients, learningRate);
+    }
+
+    train(inputTokens, targetTokens, learningRate) {
+        const predictions = this.forward(inputTokens);
+        const loss = Loss.crossEntropy(predictions, targetTokens);
+        this.backward(targetTokens, learningRate);
+        return loss;
+    }
+
+    generate(startTokens, maxLength) {
+        const generated = [...startTokens];
+        for (let i = 0; i < maxLength; i++) {
+            const probs = this.forward(generated);
+            const lastProbs = probs[probs.length - 1];
+            const nextToken = this.#sampleFromDistribution(lastProbs);
+            generated.push(nextToken);
+        }
+        return generated;
+    }
+
+    #sampleFromDistribution(probs) {
+        const random = Math.random();
+        let cumulative = 0;
+        for (let i = 0; i < probs.length; i++) {
+            cumulative += probs[i];
+            if (random < cumulative) return i;
+        }
+        return probs.length - 1;
+    }
+}
+
+// ==========================================
+// UI Logic
+// ==========================================
+
+let tokenizer = null;
+let model = null;
+let tokens = null;
+let isTraining = false;
+
+const logOutput = document.getElementById('logOutput');
+const trainBtn = document.getElementById('trainBtn');
+const generateBtn = document.getElementById('generateBtn');
+const progressContainer = document.getElementById('progressContainer');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const lossText = document.getElementById('lossText');
+const statsGrid = document.getElementById('statsGrid');
+const generationOutput = document.getElementById('generationOutput');
+
+function log(message, type = '') {
+    const line = document.createElement('div');
+    line.className = `log-line ${type}`;
+    line.textContent = message;
+    logOutput.appendChild(line);
+    logOutput.scrollTop = logOutput.scrollHeight;
+}
+
+function clearLog() {
+    logOutput.innerHTML = '';
+}
+
+async function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+trainBtn.addEventListener('click', async () => {
+    if (isTraining) return;
+    isTraining = true;
+    trainBtn.disabled = true;
+    generateBtn.disabled = true;
+    trainBtn.innerHTML = '<div class="spinner"></div> Training...';
+
+    clearLog();
+    log('Initializing tokenizer...', 'log-info');
+
+    const trainingText = document.getElementById('trainingText').value;
+    const epochs = parseInt(document.getElementById('epochs').value);
+    const embeddingDim = parseInt(document.getElementById('embeddingDim').value);
+    const numHeads = parseInt(document.getElementById('numHeads').value);
+    const numMerges = parseInt(document.getElementById('numMerges').value);
+    const numBlocks = parseInt(document.getElementById('numBlocks').value);
+    const maxSeqLength = parseInt(document.getElementById('maxSeqLength').value);
+    const learningRate = parseFloat(document.getElementById('learningRate').value);
+    const sequenceLength = parseInt(document.getElementById('sequenceLength').value);
+    const slideStep = Math.floor(sequenceLength / 2);
+
+    await sleep(50);
+
+    // Create tokenizer
+    tokenizer = new Tokenizer();
+    tokenizer.train(trainingText, numMerges);
+    const vocabSize = tokenizer.getVocabSize();
+    log(`Vocabulary size: ${vocabSize}`, 'log-success');
+
+    // Tokenize
+    tokens = tokenizer.encode(trainingText);
+    log(`Training tokens: ${tokens.length}`, 'log-success');
+
+    // Create model
+    model = new ChatGPT(vocabSize, embeddingDim, numHeads, numBlocks, maxSeqLength);
+
+    // Count parameters
+    let totalParams = 0;
+    totalParams += vocabSize * embeddingDim + maxSeqLength * embeddingDim;
+    const attentionParams = 4 * embeddingDim * embeddingDim;
+    const mlpParams = 2 * embeddingDim * (4 * embeddingDim) + embeddingDim + 4 * embeddingDim;
+    const layerNormParams = 4 * embeddingDim;
+    totalParams += numBlocks * (attentionParams + mlpParams + layerNormParams);
+    totalParams += embeddingDim * vocabSize + vocabSize;
+
+    log(`Model parameters: ~${totalParams.toLocaleString()}`, 'log-info');
+
+    // Update stats
+    document.getElementById('vocabStat').textContent = vocabSize;
+    document.getElementById('tokensStat').textContent = tokens.length;
+    document.getElementById('paramsStat').textContent = (totalParams / 1000).toFixed(1) + 'K';
+    statsGrid.classList.remove('hidden');
+
+    // Training
+    progressContainer.classList.add('active');
+    log('\n=== Training Started ===', 'log-info');
+    log(`Sequence length: ${sequenceLength}, Slide step: ${slideStep}`, 'log-dim');
+
+    for (let epoch = 0; epoch < epochs; epoch++) {
+        let totalLoss = 0;
+        let batchCount = 0;
+
+        for (let start = 0; start < tokens.length - sequenceLength - 1; start += slideStep) {
+            const inputTokens = tokens.slice(start, start + sequenceLength);
+            const targetTokens = tokens.slice(start + 1, start + sequenceLength + 1);
+            const loss = model.train(inputTokens, targetTokens, learningRate);
+            totalLoss += loss;
+            batchCount++;
+        }
+
+        const avgLoss = totalLoss / batchCount;
+        const progress = ((epoch + 1) / epochs) * 100;
+
+        progressFill.style.width = progress + '%';
+        progressText.textContent = `Epoch ${epoch + 1} / ${epochs}`;
+        lossText.textContent = `Loss: ${avgLoss.toFixed(4)}`;
+
+        if (epoch % 10 === 0 || epoch === epochs - 1) {
+            log(`Epoch ${epoch}: Loss = ${avgLoss.toFixed(4)}`, 'log-dim');
+
+            const prompt = tokenizer.encode("The ");
+            const generated = model.generate(prompt, 10);
+            const text = tokenizer.decode(generated);
+            log(`  -> "${text}"`, 'log-sample');
+
+            await sleep(10);
+        }
+    }
+
+    log('\n=== Training Complete! ===', 'log-success');
+    log('You can now generate text.', 'log-info');
+
+    trainBtn.innerHTML = 'Start Training';
+    trainBtn.disabled = false;
+    generateBtn.disabled = false;
+    isTraining = false;
+});
+
+generateBtn.addEventListener('click', () => {
+    if (!model || !tokenizer) {
+        generationOutput.innerHTML = '<span class="log-warning">Please train the model first!</span>';
+        return;
+    }
+
+    const promptText = document.getElementById('prompt').value;
+    const maxTokens = parseInt(document.getElementById('maxTokens').value);
+
+    const prompt = tokenizer.encode(promptText);
+    const generated = model.generate(prompt, maxTokens);
+    const text = tokenizer.decode(generated);
+
+    const promptEnd = promptText.length;
+    generationOutput.innerHTML = `<span class="prompt">${promptText}</span><span class="generated">${text.substring(promptEnd)}</span>`;
+
+    log(`Generated: "${text}"`, 'log-sample');
+});
+</script>
+</body>
+</html>

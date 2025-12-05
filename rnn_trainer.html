@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RNN Trainer</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg:#0a0a0f;
+            --bg-2:#0e0e16;
+            --panel:#12121c;
+            --panel-2:#171726;
+            --text:#e9e9f2;
+            --muted:#a5a7bf;
+            --line:#1e1e2e;
+            --pink:#ff2e88;
+            --pink-2:#ff86c3;
+            --glow: 0 0 .5rem var(--pink), 0 0 1.25rem color-mix(in oklab, var(--pink) 70%, white 0%), 0 0 2.5rem color-mix(in oklab, var(--pink) 35%, black 65%);
+            --radius:16px;
+            --pad: clamp(14px, 1.6vw, 22px);
+            --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+            --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            --accent:#ff2e88;
+            --accent-strong:#ff86c3;
+            --danger:#ff5470;
+            --success:#2cb67d;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: var(--font);
+            color: var(--text);
+            background:
+                radial-gradient(1200px 520px at 50% -160px, rgba(255,46,136,.12), transparent 75%),
+                linear-gradient(180deg, #090914 0%, #050509 45%, #030306 75%, #020203 100%);
+            background-color: #020203;
+            background-repeat: no-repeat;
+            background-size: 130% 70%, 100% 100%;
+            background-position: center top, center top;
+            background-attachment: fixed;
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image: linear-gradient(rgba(255,255,255,.03), rgba(255,255,255,0) 2px);
+            background-size: 100% 3px;
+            mix-blend-mode: overlay;
+            opacity: .25;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            body::before { display: none; }
+            * { animation: none !important; transition: none !important; }
+        }
+
+        .container {
+            width: min(1000px, 92vw);
+            margin-inline: auto;
+        }
+
+        header {
+            background: linear-gradient(180deg, #131321, #11111c);
+            border-bottom: 1px solid var(--line);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-weight: 900;
+            font-size: 1.25rem;
+            color: var(--text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo .pink {
+            color: var(--pink);
+            text-shadow: var(--glow);
+        }
+
+        .back-btn {
+            appearance: none;
+            border: 1px solid color-mix(in oklab, var(--pink) 35%, #ffffff00 65%);
+            color: var(--text);
+            background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+            padding: .45rem .85rem;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.9rem;
+            transition: transform .12s ease, box-shadow .15s ease;
+        }
+
+        .back-btn:hover {
+            box-shadow: var(--glow);
+            transform: translateY(-1px);
+        }
+
+        .tool-article {
+            background: linear-gradient(180deg, #131321, #11111c);
+            border: 1px solid #222238;
+            border-radius: var(--radius);
+            padding: 2.5rem;
+            margin: 2.5rem 0 4rem;
+            box-shadow: 0 18px 50px rgba(0,0,0,.45), 0 0 60px -10px rgba(255,46,136,.15);
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .tool-header h1 {
+            font-size: clamp(2.75rem, 5vw, 3.5rem);
+            line-height: 1.1;
+            font-weight: 900;
+            margin: 0 0 0.75rem;
+            background: linear-gradient(135deg, var(--text) 0%, var(--pink) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tool-header .tool-meta {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--pink-2);
+            margin-bottom: 0.5rem;
+        }
+
+        .tool-header .tool-blurb {
+            color: #d9d9ec;
+            font-size: 1.1rem;
+            margin: 0;
+            max-width: 720px;
+        }
+
+        .tool-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+
+        .panel {
+            background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 80%, black 20%), var(--panel-2));
+            border: 1px solid color-mix(in oklab, var(--pink) 12%, #1f1f2c 88%);
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45);
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--muted);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .controls-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .controls-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 700px) {
+            .controls-grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .controls-grid-3 {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            color: var(--muted);
+        }
+
+        label a {
+            color: var(--pink-2);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        label a:hover {
+            color: var(--pink);
+            text-decoration: underline;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid #2a2a3e;
+            background: #0f0f1b;
+            color: var(--text);
+            padding: 12px 14px;
+            font: inherit;
+            font-family: var(--mono);
+            outline: none;
+            transition: border 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        textarea {
+            min-height: 76px;
+            resize: vertical;
+        }
+
+        input[type="file"] {
+            width: 100%;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            border-color: var(--pink);
+            box-shadow: 0 0 0 1px color-mix(in oklab, var(--pink) 50%, transparent);
+        }
+
+        button {
+            font: inherit;
+            border: none;
+            border-radius: 999px;
+            padding: 12px 24px;
+            cursor: pointer;
+            background: linear-gradient(120deg, var(--pink), var(--pink-2));
+            color: #050509;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--glow);
+        }
+
+        button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .button-row button.secondary {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--text);
+        }
+
+        button.success {
+            background: linear-gradient(120deg, var(--success), color-mix(in oklab, var(--success) 70%, white));
+        }
+
+        .status-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .status-pill {
+            background: rgba(255, 46, 136, 0.12);
+            border-radius: 999px;
+            padding: 6px 16px;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        .log-output {
+            background: #0d0d1a;
+            border-radius: 14px;
+            border: 1px solid #23233a;
+            padding: 18px;
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            max-height: 240px;
+            overflow-y: auto;
+            line-height: 1.5;
+            color: #cfd6ff;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.35);
+        }
+
+        .log-output .log-info { color: var(--muted); }
+        .log-output .log-epoch { color: var(--success); }
+        .log-output .log-error { color: var(--danger); }
+        .log-output .log-gen { color: var(--pink-2); }
+
+        .progress-container {
+            margin-top: 14px;
+            padding: 14px 18px;
+            background: rgba(13, 19, 32, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            font-family: var(--mono);
+        }
+
+        .progress-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--pink), var(--pink-2));
+            width: 0%;
+            border-radius: inherit;
+            transition: width 0.2s ease;
+        }
+
+        .file-drop {
+            background: #0d0d1a;
+            border: 1px dashed #2a2a3e;
+            border-radius: 14px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            transition: border-color 0.2s, background 0.2s;
+            color: var(--muted);
+        }
+
+        .file-drop:hover {
+            border-color: var(--pink);
+            background: rgba(255, 46, 136, 0.05);
+        }
+
+        .file-drop input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-drop .filename {
+            display: block;
+            margin-top: 8px;
+            color: var(--pink-2);
+            font-weight: 600;
+        }
+
+        .gen-playground {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 16px;
+            align-items: end;
+        }
+
+        .gen-playground .gen-length {
+            width: 100px;
+        }
+
+        .gen-playground .gen-btn-wrap button {
+            width: 100%;
+        }
+
+        @media (max-width: 500px) {
+            .gen-playground {
+                grid-template-columns: 1fr;
+            }
+            .gen-playground .gen-length,
+            .gen-playground .gen-btn-wrap {
+                width: 100%;
+            }
+        }
+
+        .gen-output {
+            min-height: 120px;
+            border-radius: 14px;
+            border: 1px solid #222238;
+            background: #090914;
+            padding: 18px;
+            font-family: var(--mono);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--pink-2);
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-top: 16px;
+        }
+
+        footer {
+            border-top: 1px solid var(--line);
+            background: #0a0a12;
+            color: var(--muted);
+            padding: 1rem 0 1.5rem;
+            font-size: 0.875rem;
+            margin-top: 4rem;
+        }
+
+        footer a {
+            color: var(--pink-2);
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255, 134, 195, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        footer a:hover {
+            color: var(--pink);
+            border-bottom-color: var(--pink);
+            text-shadow: 0 0 8px rgba(255, 46, 136, 0.4);
+        }
+
+        .hidden { display: none; }
+
+        @media (max-width: 768px) {
+            .tool-article { padding: 1.5rem; }
+            nav { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <a href="index.html" class="logo">
+                The Gift of <span class="pink">Gab</span>
+            </a>
+            <a href="blog_recurrent.html" class="back-btn">Back to Blog</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <article class="tool-article">
+            <div class="tool-sections">
+                <!-- Training Data -->
+                <section class="panel">
+                    <div class="section-title">Training Data</div>
+                    <div class="controls-grid">
+                        <div>
+                            <label>Upload text corpus</label>
+                            <div class="file-drop">
+                                <input type="file" id="fileInput" accept=".txt">
+                                Drop a .txt file or click to browse
+                                <span class="filename" id="fileName"></span>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="trainingText">Or paste text directly</label>
+                            <textarea id="trainingText" placeholder="Enter training text..."></textarea>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tokenizer -->
+                <section class="panel">
+                    <div class="section-title">Tokenizer</div>
+                    <div class="controls-grid">
+                        <div>
+                            <label for="numMerges">BPE merges</label>
+                            <input type="number" id="numMerges" value="500" min="0">
+                        </div>
+                        <div>
+                            <label for="reservedTokens">Reserved tokens (one per line) <a href="#" id="loadCommonTokens">[Load Common]</a></label>
+                            <textarea id="reservedTokens" rows="2" placeholder="<PAD>&#10;<EOS>"></textarea>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Model Architecture -->
+                <section class="panel">
+                    <div class="section-title">Model Architecture</div>
+                    <div class="controls-grid-3">
+                        <div>
+                            <label for="embeddingDim">Embedding dim</label>
+                            <input type="number" id="embeddingDim" value="64" min="8">
+                        </div>
+                        <div>
+                            <label for="hiddenSize">Hidden size</label>
+                            <input type="number" id="hiddenSize" value="128" min="8">
+                        </div>
+                        <div>
+                            <label for="numLayers">RNN layers</label>
+                            <input type="number" id="numLayers" value="2" min="1" max="8">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Training Parameters -->
+                <section class="panel">
+                    <div class="section-title">Training Parameters</div>
+                    <div class="controls-grid-4">
+                        <div>
+                            <label for="learningRate">Learning rate</label>
+                            <input type="number" id="learningRate" value="0.1" step="0.01" min="0.001">
+                        </div>
+                        <div>
+                            <label for="epochs">Epochs</label>
+                            <input type="number" id="epochs" value="500" min="1">
+                        </div>
+                        <div>
+                            <label for="sequenceLength">Seq length</label>
+                            <input type="number" id="sequenceLength" value="32" min="4">
+                        </div>
+                        <div>
+                            <label for="slideStep">Slide step</label>
+                            <input type="number" id="slideStep" value="16" min="1">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Controls -->
+                <section class="panel">
+                    <div class="section-title">Controls</div>
+                    <div class="button-row">
+                        <button id="initBtn">Initialize</button>
+                        <button id="startBtn" class="success" disabled>Start Training</button>
+                        <button id="pauseBtn" class="secondary" disabled>Pause</button>
+                        <button id="saveBtn" class="secondary" disabled>Save Model</button>
+                        <button id="loadBtn" class="secondary">Load Model</button>
+                        <input type="file" id="loadInput" accept=".gab" class="hidden">
+                    </div>
+                    <div class="status-bar">
+                        <span class="status-pill" id="statusPill">Idle</span>
+                        <span>Epoch: <strong id="epochStat">0</strong> / <strong id="totalEpochsStat">0</strong></span>
+                        <span>Loss: <strong id="lossStat">-</strong></span>
+                        <span>Vocab: <strong id="vocabStat">-</strong></span>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-meta">
+                            <span id="progressLabel">Waiting...</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" id="progressBar"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Log -->
+                <section class="panel">
+                    <div class="section-title">Training Log</div>
+                    <div class="log-output" id="log">Waiting for action...</div>
+                    <div class="button-row" style="margin-top: 12px;">
+                        <button id="clearLogBtn" class="secondary">Clear Log</button>
+                    </div>
+                </section>
+
+                <!-- Generate -->
+                <section class="panel">
+                    <div class="section-title">Generate Text</div>
+                    <div class="gen-playground">
+                        <div>
+                            <label for="seedText">Seed text</label>
+                            <input type="text" id="seedText" value="The " placeholder="Seed text...">
+                        </div>
+                        <div class="gen-length">
+                            <label for="genLength">Length</label>
+                            <input type="number" id="genLength" value="50" min="1">
+                        </div>
+                        <div class="gen-btn-wrap">
+                            <label>&nbsp;</label>
+                            <button id="generateBtn" disabled>Generate</button>
+                        </div>
+                    </div>
+                    <div class="gen-output" id="genOutput">Generated text will appear here...</div>
+                </section>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div>&copy; 2025 <a href="https://gabormakesgames.com/">Gabor Szauer</a></div>
+        </div>
+    </footer>
+
+    <script>
+        // DOM Elements
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const trainingText = document.getElementById('trainingText');
+        const numMerges = document.getElementById('numMerges');
+        const reservedTokens = document.getElementById('reservedTokens');
+        const embeddingDim = document.getElementById('embeddingDim');
+        const hiddenSize = document.getElementById('hiddenSize');
+        const numLayers = document.getElementById('numLayers');
+        const learningRate = document.getElementById('learningRate');
+        const epochs = document.getElementById('epochs');
+        const sequenceLength = document.getElementById('sequenceLength');
+        const slideStep = document.getElementById('slideStep');
+
+        const initBtn = document.getElementById('initBtn');
+        const startBtn = document.getElementById('startBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const loadBtn = document.getElementById('loadBtn');
+        const loadInput = document.getElementById('loadInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const clearLogBtn = document.getElementById('clearLogBtn');
+
+        const statusPill = document.getElementById('statusPill');
+        const progressBar = document.getElementById('progressBar');
+        const progressLabel = document.getElementById('progressLabel');
+        const epochStat = document.getElementById('epochStat');
+        const totalEpochsStat = document.getElementById('totalEpochsStat');
+        const lossStat = document.getElementById('lossStat');
+        const vocabStat = document.getElementById('vocabStat');
+
+        const seedText = document.getElementById('seedText');
+        const genLength = document.getElementById('genLength');
+        const genOutput = document.getElementById('genOutput');
+        const logEl = document.getElementById('log');
+
+        let worker = null;
+        let isTraining = false;
+
+        const statusColors = {
+            idle: 'rgba(255,255,255,0.08)',
+            busy: '#7f5af0',
+            success: '#2cb67d',
+            error: '#ff5470'
+        };
+
+        function setStatus(message, tone = 'idle') {
+            statusPill.textContent = message;
+            statusPill.style.background = statusColors[tone] || statusColors.idle;
+            statusPill.style.color = tone === 'idle' ? '#d7dbec' : '#0b0d18';
+        }
+
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log-${type}`;
+            const time = new Date().toLocaleTimeString();
+            div.textContent = `[${time}] ${msg}`;
+            logEl.appendChild(div);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        logEl.textContent = '';
+        clearLogBtn.onclick = () => { logEl.innerHTML = ''; };
+
+        // Load common ChatML tokens
+        document.getElementById('loadCommonTokens').onclick = (e) => {
+            e.preventDefault();
+            reservedTokens.value = `<|im_start|>
+<|im_end|>
+<|pad|>
+<|endoftext|>
+<think>
+</think>
+<|system|>
+<|user|>
+<|assistant|>`;
+        };
+
+        // File input
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    trainingText.value = ev.target.result;
+                    log(`Loaded ${file.name} (${ev.target.result.length} chars)`);
+                };
+                reader.readAsText(file);
+            }
+        };
+
+        // Worker
+        function createWorker() {
+            if (worker) worker.terminate();
+            worker = new Worker('trainWorker.js');
+
+            worker.onmessage = (e) => {
+                const { type, ...data } = e.data;
+
+                switch (type) {
+                    case 'log':
+                        log(data.message);
+                        break;
+                    case 'error':
+                        log(data.message, 'error');
+                        setStatus('Error', 'error');
+                        break;
+                    case 'ready':
+                        log('Model initialized and ready', 'epoch');
+                        vocabStat.textContent = data.vocabSize;
+                        startBtn.disabled = false;
+                        saveBtn.disabled = false;
+                        generateBtn.disabled = false;
+                        setStatus('Ready', 'success');
+                        break;
+                    case 'epoch':
+                        epochStat.textContent = data.epoch + 1;
+                        totalEpochsStat.textContent = data.totalEpochs;
+                        lossStat.textContent = data.loss.toFixed(4);
+                        const pct = ((data.epoch + 1) / data.totalEpochs * 100);
+                        progressBar.style.width = pct + '%';
+                        progressLabel.textContent = `Epoch ${data.epoch + 1}/${data.totalEpochs} - Loss: ${data.loss.toFixed(4)}`;
+                        if ((data.epoch + 1) % 50 === 0) {
+                            log(`Epoch ${data.epoch + 1}: loss = ${data.loss.toFixed(4)}`, 'epoch');
+                        }
+                        break;
+                    case 'paused':
+                        isTraining = false;
+                        startBtn.disabled = false;
+                        startBtn.textContent = 'Resume';
+                        pauseBtn.disabled = true;
+                        setStatus('Paused', 'idle');
+                        log(`Paused at epoch ${data.epoch}`);
+                        break;
+                    case 'complete':
+                        isTraining = false;
+                        startBtn.disabled = true;
+                        pauseBtn.disabled = true;
+                        setStatus('Complete', 'success');
+                        log('Training complete!', 'epoch');
+                        break;
+                    case 'generated':
+                        genOutput.textContent = data.text;
+                        log(`Generated ${data.text.length} chars`, 'gen');
+                        break;
+                    case 'modelLoaded':
+                        vocabStat.textContent = data.vocabSize;
+                        startBtn.disabled = true;
+                        saveBtn.disabled = false;
+                        generateBtn.disabled = false;
+                        setStatus('Loaded', 'success');
+                        log('Model loaded successfully', 'epoch');
+                        break;
+                    case 'modelData':
+                        downloadModel(data.modelData, data.tokenizerData);
+                        break;
+                }
+            };
+
+            worker.onerror = (e) => {
+                log(`Worker error: ${e.message}`, 'error');
+                setStatus('Error', 'error');
+            };
+        }
+
+        // Initialize
+        initBtn.onclick = () => {
+            const text = trainingText.value.trim();
+            if (!text) {
+                log('Please provide training text', 'error');
+                setStatus('No data', 'error');
+                return;
+            }
+
+            createWorker();
+            setStatus('Initializing...', 'busy');
+
+            const reserved = reservedTokens.value
+                .split('\n')
+                .map(t => t.trim())
+                .filter(t => t.length > 0);
+
+            worker.postMessage({
+                type: 'init',
+                data: {
+                    trainingText: text,
+                    numMerges: parseInt(numMerges.value),
+                    reservedTokens: reserved,
+                    embeddingDim: parseInt(embeddingDim.value),
+                    hiddenSize: parseInt(hiddenSize.value),
+                    numLayers: parseInt(numLayers.value),
+                    learningRate: parseFloat(learningRate.value),
+                    epochs: parseInt(epochs.value),
+                    sequenceLength: parseInt(sequenceLength.value),
+                    slideStep: parseInt(slideStep.value)
+                }
+            });
+
+            totalEpochsStat.textContent = epochs.value;
+            epochStat.textContent = '0';
+            lossStat.textContent = '-';
+            progressBar.style.width = '0%';
+            progressLabel.textContent = 'Waiting...';
+            startBtn.textContent = 'Start Training';
+        };
+
+        // Start/Resume
+        startBtn.onclick = () => {
+            if (!worker) return;
+            isTraining = true;
+            startBtn.disabled = true;
+            pauseBtn.disabled = false;
+            setStatus('Training...', 'busy');
+            worker.postMessage({ type: 'start' });
+            log('Training started');
+        };
+
+        // Pause
+        pauseBtn.onclick = () => {
+            if (!worker) return;
+            worker.postMessage({ type: 'pause' });
+            pauseBtn.disabled = true;
+        };
+
+        // Generate
+        generateBtn.onclick = () => {
+            if (!worker) return;
+            const prompt = seedText.value || ' ';
+            const length = parseInt(genLength.value) || 50;
+            worker.postMessage({ type: 'generate', data: { prompt, length } });
+        };
+
+        // Save
+        saveBtn.onclick = () => {
+            if (!worker) return;
+            worker.postMessage({ type: 'saveModel' });
+            log('Preparing download...');
+        };
+
+        function downloadModel(modelBuffer, tokenizerBuffer) {
+            const modelData = new Uint8Array(modelBuffer);
+            const tokenizerData = new Uint8Array(tokenizerBuffer);
+
+            const combined = new ArrayBuffer(8 + modelData.length + tokenizerData.length);
+            const view = new DataView(combined);
+            const bytes = new Uint8Array(combined);
+
+            view.setUint32(0, modelData.length, true);
+            view.setUint32(4, tokenizerData.length, true);
+            bytes.set(modelData, 8);
+            bytes.set(tokenizerData, 8 + modelData.length);
+
+            const blob = new Blob([combined], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `model_${Date.now()}.gab`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            log(`Saved (${(combined.byteLength / 1024).toFixed(1)} KB)`, 'epoch');
+        }
+
+        // Load
+        loadBtn.onclick = () => loadInput.click();
+
+        loadInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            setStatus('Loading...', 'busy');
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const data = new Uint8Array(ev.target.result);
+                const view = new DataView(data.buffer);
+
+                const modelSize = view.getUint32(0, true);
+                const tokenizerSize = view.getUint32(4, true);
+
+                const modelData = data.slice(8, 8 + modelSize);
+                const tokenizerData = data.slice(8 + modelSize, 8 + modelSize + tokenizerSize);
+
+                createWorker();
+                worker.postMessage({
+                    type: 'loadModel',
+                    data: {
+                        modelData: modelData.buffer,
+                        tokenizerData: tokenizerData.buffer
+                    }
+                }, [modelData.buffer, tokenizerData.buffer]);
+
+                log(`Loading ${file.name}...`);
+            };
+            reader.readAsArrayBuffer(file);
+            loadInput.value = '';
+        };
+
+        // Init
+        setStatus('Idle', 'idle');
+        log('Ready. Upload a corpus to begin training.');
+    </script>
+</body>
+</html>

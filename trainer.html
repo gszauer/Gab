@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GabGPT Trainer</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg:#0a0a0f;
+            --bg-2:#0e0e16;
+            --panel:#12121c;
+            --panel-2:#171726;
+            --text:#e9e9f2;
+            --muted:#a5a7bf;
+            --line:#1e1e2e;
+            --pink:#ff2e88;
+            --pink-2:#ff86c3;
+            --glow: 0 0 .5rem var(--pink), 0 0 1.25rem color-mix(in oklab, var(--pink) 70%, white 0%), 0 0 2.5rem color-mix(in oklab, var(--pink) 35%, black 65%);
+            --radius:16px;
+            --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+            --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            --danger:#ff5470;
+            --success:#2cb67d;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: var(--font);
+            color: var(--text);
+            background:
+                radial-gradient(1200px 520px at 50% -160px, rgba(255,46,136,.12), transparent 75%),
+                linear-gradient(180deg, #090914 0%, #050509 45%, #030306 75%, #020203 100%);
+            background-color: #020203;
+            background-repeat: no-repeat;
+            background-size: 130% 70%, 100% 100%;
+            background-position: center top, center top;
+            background-attachment: fixed;
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image: linear-gradient(rgba(255,255,255,.03), rgba(255,255,255,0) 2px);
+            background-size: 100% 3px;
+            mix-blend-mode: overlay;
+            opacity: .25;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            body::before { display: none; }
+            * { animation: none !important; transition: none !important; }
+        }
+
+        .container {
+            width: min(1000px, 92vw);
+            margin-inline: auto;
+        }
+
+        header {
+            background: linear-gradient(180deg, #131321, #11111c);
+            border-bottom: 1px solid var(--line);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-weight: 900;
+            font-size: 1.25rem;
+            color: var(--text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo .pink {
+            color: var(--pink);
+            text-shadow: var(--glow);
+        }
+
+        .back-btn {
+            appearance: none;
+            border: 1px solid color-mix(in oklab, var(--pink) 35%, #ffffff00 65%);
+            color: var(--text);
+            background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+            padding: .45rem .85rem;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.9rem;
+            transition: transform .12s ease, box-shadow .15s ease;
+        }
+
+        .back-btn:hover {
+            box-shadow: var(--glow);
+            transform: translateY(-1px);
+        }
+
+        .tool-article {
+            background: linear-gradient(180deg, #131321, #11111c);
+            border: 1px solid #222238;
+            border-radius: var(--radius);
+            padding: 2.5rem;
+            margin: 2.5rem 0 4rem;
+            box-shadow: 0 18px 50px rgba(0,0,0,.45), 0 0 60px -10px rgba(255,46,136,.15);
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .tool-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+
+        .panel {
+            background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 80%, black 20%), var(--panel-2));
+            border: 1px solid color-mix(in oklab, var(--pink) 12%, #1f1f2c 88%);
+            border-radius: 18px;
+            padding: 24px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45);
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--muted);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .controls-grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .controls-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .controls-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 700px) {
+            .controls-grid-4, .controls-grid-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 500px) {
+            .controls-grid-4, .controls-grid-3, .controls-grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            color: var(--muted);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid #2a2a3e;
+            background: #0f0f1b;
+            color: var(--text);
+            padding: 12px 14px;
+            font: inherit;
+            font-family: var(--mono);
+            outline: none;
+            transition: border 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            border-color: var(--pink);
+            box-shadow: 0 0 0 1px color-mix(in oklab, var(--pink) 50%, transparent);
+        }
+
+        .hint {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        button {
+            font: inherit;
+            border: none;
+            border-radius: 999px;
+            padding: 12px 24px;
+            cursor: pointer;
+            background: linear-gradient(120deg, var(--pink), var(--pink-2));
+            color: #050509;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--glow);
+        }
+
+        button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .button-row button.secondary {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--text);
+        }
+
+        button.success {
+            background: linear-gradient(120deg, var(--success), color-mix(in oklab, var(--success) 70%, white));
+        }
+
+        button.warning {
+            background: linear-gradient(120deg, #d29922, #e3b341);
+        }
+
+        button.danger {
+            background: linear-gradient(120deg, var(--danger), #ff7b72);
+        }
+
+        .mode-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .mode-option {
+            padding: 15px;
+            background: #0f0f1b;
+            border: 2px solid #2a2a3e;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .mode-option:hover {
+            border-color: var(--pink);
+        }
+
+        .mode-option.active {
+            border-color: var(--success);
+            background: rgba(44, 182, 125, 0.1);
+        }
+
+        .mode-option h3 {
+            font-size: 0.9rem;
+            margin: 0 0 4px;
+            color: var(--text);
+        }
+
+        .mode-option p {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin: 0;
+        }
+
+        .file-drop {
+            background: #0d0d1a;
+            border: 2px dashed #2a2a3e;
+            border-radius: 14px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            transition: border-color 0.2s, background 0.2s;
+            color: var(--muted);
+        }
+
+        .file-drop:hover {
+            border-color: var(--pink);
+            background: rgba(255, 46, 136, 0.05);
+        }
+
+        .file-drop input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-drop .filename {
+            display: block;
+            margin-top: 8px;
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .reserved-keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 12px;
+            background: #0f0f1b;
+            border-radius: 12px;
+            border: 1px solid #2a2a3e;
+            min-height: 50px;
+        }
+
+        .keyword-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            background: rgba(255, 46, 136, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .keyword-tag button {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            padding: 0;
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .keyword-tag button:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat-box {
+            background: #0f0f1b;
+            border: 1px solid #2a2a3e;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: var(--mono);
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--pink);
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--muted);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .progress-container {
+            margin-top: 14px;
+            padding: 14px 18px;
+            background: rgba(13, 19, 32, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            font-family: var(--mono);
+        }
+
+        .progress-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--pink), var(--pink-2));
+            width: 0%;
+            border-radius: inherit;
+            transition: width 0.2s ease;
+        }
+
+        .log-output {
+            background: #0d0d1a;
+            border-radius: 14px;
+            border: 1px solid #23233a;
+            padding: 18px;
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            max-height: 350px;
+            overflow-y: auto;
+            line-height: 1.5;
+            color: #cfd6ff;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.35);
+        }
+
+        .log-output .log-info { color: var(--muted); }
+        .log-output .log-success { color: var(--success); }
+        .log-output .log-warning { color: #d29922; }
+        .log-output .log-error { color: var(--danger); }
+        .log-output .log-epoch { color: var(--pink-2); font-weight: bold; }
+        .log-output .log-loss { color: var(--pink); }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            background: rgba(255, 46, 136, 0.12);
+            border-radius: 999px;
+            font-size: 0.85rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--muted);
+        }
+
+        .status-dot.idle { background: var(--muted); }
+        .status-dot.training { background: var(--success); animation: pulse 1s infinite; }
+        .status-dot.paused { background: #d29922; }
+        .status-dot.error { background: var(--danger); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .param-section {
+            margin-top: 15px;
+            padding: 12px 16px;
+            background: #0f0f1b;
+            border: 1px solid #2a2a3e;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .param-estimate {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .param-estimate-label {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .param-estimate-value {
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--pink);
+        }
+
+        .param-estimate-hint {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .preset-buttons button {
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--text);
+        }
+
+        .format-example {
+            margin-top: 15px;
+        }
+
+        .code-example {
+            background: #0f0f1b;
+            border: 1px solid #2a2a3e;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .code-example .code-label {
+            background: #0a0a14;
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            color: var(--pink);
+            border-bottom: 1px solid #2a2a3e;
+        }
+
+        .code-example pre {
+            padding: 10px;
+            margin: 0;
+            font-size: 0.75rem;
+            font-family: var(--mono);
+            color: var(--text);
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .hidden { display: none !important; }
+
+        footer {
+            border-top: 1px solid var(--line);
+            background: #0a0a12;
+            color: var(--muted);
+            padding: 1rem 0 1.5rem;
+            font-size: 0.875rem;
+            margin-top: 4rem;
+        }
+
+        footer a {
+            color: var(--pink-2);
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255, 134, 195, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        footer a:hover {
+            color: var(--pink);
+            border-bottom-color: var(--pink);
+            text-shadow: 0 0 8px rgba(255, 46, 136, 0.4);
+        }
+
+        @media (max-width: 768px) {
+            .tool-article { padding: 1.5rem; }
+            nav { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <a href="index.html" class="logo">
+                The Gift of <span class="pink">Gab</span>
+            </a>
+            <a href="blog_training.html" class="back-btn">Back to Blog</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <article class="tool-article">
+            <div class="tool-sections">
+                <!-- Training Mode Selection -->
+                <section class="panel">
+                    <div class="section-title">Training Mode</div>
+                    <div class="mode-selector">
+                        <div class="mode-option active" data-mode="pretrain-direct">
+                            <h3>Pre-Train Direct</h3>
+                            <p>Enter raw text directly</p>
+                        </div>
+                        <div class="mode-option" data-mode="pretrain-file">
+                            <h3>Pre-Train File</h3>
+                            <p>Upload text file</p>
+                        </div>
+                        <div class="mode-option" data-mode="sft-direct">
+                            <h3>SFT Direct</h3>
+                            <p>Enter ChatML directly</p>
+                        </div>
+                        <div class="mode-option" data-mode="sft-file">
+                            <h3>SFT File</h3>
+                            <p>Upload ChatML file</p>
+                        </div>
+                    </div>
+
+                    <!-- Training Data Input -->
+                    <div id="directInputSection">
+                        <label>Training Data</label>
+                        <textarea id="trainingDataText" placeholder="Enter your training text here..."></textarea>
+                        <p class="hint" id="inputHint">For pre-training, enter raw text. Model learns to predict next character.</p>
+                    </div>
+
+                    <div id="fileInputSection" class="hidden">
+                        <label>Upload Training File</label>
+                        <div class="file-drop">
+                            <input type="file" id="trainingFile" accept=".txt,.json,.jsonl">
+                            Drop file here or click to browse
+                            <br><span style="font-size: 0.8rem;">.txt, .json, .jsonl supported</span>
+                            <span class="filename" id="fileInfo"></span>
+                        </div>
+
+                        <!-- Format Examples -->
+                        <div id="pretrainFileHint" class="format-example">
+                            <label>Expected Format (Pre-Train)</label>
+                            <div class="code-example">
+                                <div class="code-label">.txt - Plain text file:</div>
+                                <pre>Your raw training text goes here.
+It can span multiple lines.
+The model learns to predict the next token.</pre>
+                            </div>
+                        </div>
+
+                        <div id="sftFileHint" class="format-example hidden">
+                            <label>Expected Format (SFT)</label>
+                            <div class="code-example">
+                                <div class="code-label">.txt - Plain ChatML text:</div>
+                                <pre>&lt;|user|&gt;Hello, how are you?&lt;|end|&gt;&lt;|assistant|&gt;I'm doing well, thanks!&lt;|end|&gt;</pre>
+                            </div>
+                            <div class="code-example">
+                                <div class="code-label">.jsonl - One conversation per line:</div>
+                                <pre>{"messages": [{"role": "user", "content": "Hello!"}, {"role": "assistant", "content": "Hi!"}]}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Model Hyperparameters -->
+                <section class="panel">
+                    <div class="section-title">Model Architecture</div>
+                    <div class="controls-grid-4">
+                        <div>
+                            <label for="embeddingDim">Embedding Dimension</label>
+                            <input type="number" id="embeddingDim" value="512" min="8" step="8" onchange="updateParamEstimate()">
+                        </div>
+                        <div>
+                            <label for="numHeads">Attention Heads</label>
+                            <input type="number" id="numHeads" value="8" min="1" onchange="updateParamEstimate()">
+                        </div>
+                        <div>
+                            <label for="numBlocks">Transformer Blocks</label>
+                            <input type="number" id="numBlocks" value="6" min="1" onchange="updateParamEstimate()">
+                        </div>
+                        <div>
+                            <label for="maxSeqLength">Max Sequence Length</label>
+                            <input type="number" id="maxSeqLength" value="512" min="16" step="16" onchange="updateParamEstimate()">
+                        </div>
+                    </div>
+
+                    <div class="param-section">
+                        <div class="param-estimate">
+                            <span class="param-estimate-label">Est. Params:</span>
+                            <span class="param-estimate-value" id="paramEstimate">~21M</span>
+                            <span class="param-estimate-hint" id="paramHint">(vocab ~1,756)</span>
+                        </div>
+                        <div class="preset-buttons">
+                            <button onclick="applyPreset('small')">~300K</button>
+                            <button onclick="applyPreset('medium')">~20M</button>
+                            <button onclick="applyPreset('large')">~1B</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tokenizer Configuration -->
+                <section class="panel">
+                    <div class="section-title">Tokenizer (BPE)</div>
+                    <div class="controls-grid-2">
+                        <div>
+                            <label for="numMerges">Number of Merges</label>
+                            <input type="number" id="numMerges" value="1500" min="0" step="50" onchange="updateParamEstimate()">
+                            <p class="hint">Higher = larger vocabulary, more compression</p>
+                        </div>
+                        <div>
+                            <label>Reserved Keywords</label>
+                            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                <input type="text" id="newKeyword" placeholder="Add keyword..." style="flex: 1;">
+                                <button class="secondary" onclick="addKeyword()" style="padding: 8px 16px;">Add</button>
+                            </div>
+                            <button class="secondary" onclick="addChatMLKeywords()" style="padding: 6px 12px; font-size: 0.8rem;">+ ChatML Tokens</button>
+                        </div>
+                    </div>
+                    <div class="reserved-keywords" id="keywordsList"></div>
+                </section>
+
+                <!-- Training Hyperparameters -->
+                <section class="panel">
+                    <div class="section-title">Training Configuration</div>
+                    <div class="controls-grid-3">
+                        <div>
+                            <label for="numEpochs">Epochs</label>
+                            <input type="number" id="numEpochs" value="10" min="1">
+                        </div>
+                        <div>
+                            <label for="batchSize">Batch Size</label>
+                            <input type="number" id="batchSize" value="4" min="1">
+                        </div>
+                        <div>
+                            <label for="seqLength">Sequence Length</label>
+                            <input type="number" id="seqLength" value="256" min="8" step="8">
+                        </div>
+                    </div>
+                    <div class="controls-grid-3" style="margin-top: 20px;">
+                        <div>
+                            <label for="learningRate">Learning Rate</label>
+                            <input type="number" id="learningRate" value="0.0003" step="0.0001" min="0">
+                        </div>
+                        <div>
+                            <label for="warmupRatio">Warmup Ratio</label>
+                            <input type="number" id="warmupRatio" value="0.1" step="0.05" min="0" max="1">
+                        </div>
+                        <div>
+                            <label for="logEvery">Log Every N Steps</label>
+                            <input type="number" id="logEvery" value="10" min="1">
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <label style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text);">
+                            <input type="checkbox" id="useAdam" checked style="width: auto; accent-color: var(--pink);">
+                            <span>Use Adam Optimizer</span>
+                        </label>
+                        <p class="hint">Adam uses adaptive learning rates with momentum. Disable for simple SGD.</p>
+                    </div>
+                </section>
+
+                <!-- Training Controls -->
+                <section class="panel">
+                    <div class="section-title">Training Controls</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+                        <div class="button-row">
+                            <button class="success" id="startBtn" onclick="startTraining()">▶ Start Training</button>
+                            <button class="warning" id="pauseBtn" onclick="pauseTraining()" disabled>⏸ Pause</button>
+                            <button id="resumeBtn" onclick="resumeTraining()" disabled>▶ Resume</button>
+                            <button class="danger" id="stopBtn" onclick="stopTraining()" disabled>⏹ Stop</button>
+                        </div>
+                        <span class="status-indicator">
+                            <span class="status-dot" id="statusDot"></span>
+                            <span id="statusText">Idle</span>
+                        </span>
+                    </div>
+
+                    <div class="progress-container">
+                        <div class="progress-meta">
+                            <span id="progressLabel">Waiting...</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" id="progressBar"></div>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-value" id="currentEpoch">0</div>
+                            <div class="stat-label">Epoch</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="currentStep">0</div>
+                            <div class="stat-label">Step</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="currentLoss">-</div>
+                            <div class="stat-label">Loss</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="avgLoss">-</div>
+                            <div class="stat-label">Avg Loss</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Training Log -->
+                <section class="panel">
+                    <div class="section-title">Training Log</div>
+                    <div class="log-output" id="logContainer"></div>
+                    <div class="button-row" style="margin-top: 12px;">
+                        <button class="secondary" onclick="clearLogs()">Clear Log</button>
+                    </div>
+                </section>
+
+                <!-- Import/Export Section -->
+                <section class="panel">
+                    <div class="section-title">Save & Load</div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-weight: 600; color: var(--text);">Training Session</label>
+                        <p class="hint" style="margin-bottom: 10px;">Save/load complete training state including model, tokenizer, hyperparameters, and training data.</p>
+                        <div class="button-row">
+                            <button class="secondary" onclick="saveSession()">💾 Save Session</button>
+                            <button class="secondary" onclick="document.getElementById('loadSessionFile').click()">📂 Load Session</button>
+                            <input type="file" id="loadSessionFile" accept=".gabs" style="display: none;" onchange="loadSession(event)">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-weight: 600; color: var(--text);">Model Only</label>
+                        <p class="hint" style="margin-bottom: 10px;">Export/import just the trained model weights.</p>
+                        <div class="button-row">
+                            <button class="secondary" onclick="exportModel()">📤 Export Model (.gab)</button>
+                            <button class="secondary" onclick="document.getElementById('importModelFile').click()">📥 Import Model</button>
+                            <input type="file" id="importModelFile" accept=".gab" style="display: none;" onchange="importModel(event)">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="font-weight: 600; color: var(--text);">Tokenizer Only</label>
+                        <p class="hint" style="margin-bottom: 10px;">Export/import just the trained tokenizer.</p>
+                        <div class="button-row">
+                            <button class="secondary" onclick="exportTokenizer()">📤 Export Tokenizer (.bpe)</button>
+                            <button class="secondary" onclick="document.getElementById('importTokenizerFile').click()">📥 Import Tokenizer</button>
+                            <input type="file" id="importTokenizerFile" accept=".bpe" style="display: none;" onchange="importTokenizer(event)">
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div>&copy; 2025 <a href="https://gabormakesgames.com/">Gabor Szauer</a></div>
+        </div>
+    </footer>
+
+    <!-- Include gab.js -->
+    <script src="gab.js"></script>
+
+    <!-- Worker Code (inline as blob) -->
+    <script id="workerCode" type="text/worker">
+        // Worker receives the gab.js code and evals it
+        let gabCode = null;
+        let Tokenizer, GabGPT, AdamOptimizer, createBatches, getLearningRate;
+
+        let model = null;
+        let tokenizer = null;
+        let optimizer = null;
+        let batches = null;
+        let isPaused = false;
+        let shouldStop = false;
+        let currentEpoch = 0;
+        let currentBatchIndex = 0;
+        let totalSteps = 0;
+        let currentStep = 0;
+        let warmupSteps = 0;
+        let baseLearningRate = 0.001;
+        let logEvery = 1;
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            self.postMessage({
+                type: 'log',
+                data: { message, logType: type, timestamp }
+            });
+        }
+
+        function updateProgress(data) {
+            self.postMessage({ type: 'progress', data });
+        }
+
+        function updateStats(data) {
+            self.postMessage({ type: 'stats', data });
+        }
+
+        self.onmessage = function(e) {
+            const { action, payload } = e.data;
+
+            switch (action) {
+                case 'init':
+                    initializeFromCode(payload.gabCode);
+                    break;
+                case 'start':
+                    startTraining(payload);
+                    break;
+                case 'pause':
+                    isPaused = true;
+                    log('Training paused by user', 'warning');
+                    self.postMessage({ type: 'paused' });
+                    break;
+                case 'resume':
+                    isPaused = false;
+                    log('Training resumed', 'success');
+                    self.postMessage({ type: 'resumed' });
+                    continueTraining();
+                    break;
+                case 'stop':
+                    shouldStop = true;
+                    isPaused = false;
+                    log('Training stopped by user', 'error');
+                    break;
+                case 'getState':
+                    sendCurrentState();
+                    break;
+                case 'loadState':
+                    loadState(payload);
+                    break;
+            }
+        };
+
+        function initializeFromCode(code) {
+            try {
+                gabCode = code;
+
+                const wrappedCode = `
+                    (function() {
+                        ${code}
+                        return {
+                            Tokenizer: typeof Tokenizer !== 'undefined' ? Tokenizer : null,
+                            GabGPT: typeof GabGPT !== 'undefined' ? GabGPT : null,
+                            AdamOptimizer: typeof AdamOptimizer !== 'undefined' ? AdamOptimizer : null,
+                            createBatches: typeof createBatches !== 'undefined' ? createBatches : null,
+                            getLearningRate: typeof getLearningRate !== 'undefined' ? getLearningRate : null
+                        };
+                    })();
+                `;
+
+                const exports = eval(wrappedCode);
+
+                Tokenizer = exports.Tokenizer;
+                GabGPT = exports.GabGPT;
+                AdamOptimizer = exports.AdamOptimizer;
+                createBatches = exports.createBatches;
+                getLearningRate = exports.getLearningRate;
+
+                if (!Tokenizer) throw new Error('Tokenizer class not found in gab.js');
+                if (!GabGPT) throw new Error('GabGPT class not found in gab.js');
+                if (!AdamOptimizer) throw new Error('AdamOptimizer class not found in gab.js');
+                if (!createBatches) throw new Error('createBatches function not found in gab.js');
+                if (!getLearningRate) throw new Error('getLearningRate function not found in gab.js');
+
+                log('Worker initialized with GabGPT code', 'success');
+                self.postMessage({ type: 'initialized' });
+            } catch (err) {
+                log('Failed to initialize worker: ' + err.message, 'error');
+                self.postMessage({ type: 'error', data: err.message });
+            }
+        }
+
+        function startTraining(config) {
+            try {
+                shouldStop = false;
+                isPaused = false;
+                currentEpoch = 0;
+                currentBatchIndex = 0;
+                currentStep = 0;
+
+                log('═══════════════════════════════════════════════════════════', 'info');
+                log('STARTING NEW TRAINING SESSION', 'epoch');
+                log('═══════════════════════════════════════════════════════════', 'info');
+
+                baseLearningRate = config.learningRate;
+                logEvery = config.logEvery || 1;
+
+                log('STEP 1: Creating tokenizer...', 'info');
+                tokenizer = new Tokenizer();
+
+                if (config.reservedKeywords && config.reservedKeywords.length > 0) {
+                    log('Reserving ' + config.reservedKeywords.length + ' keywords...', 'info');
+                    for (let i = 0; i < config.reservedKeywords.length; i++) {
+                        const keyword = config.reservedKeywords[i];
+                        tokenizer.reserveToken(keyword);
+                    }
+                }
+
+                const trainingText = config.trainingData;
+                log('Training data size: ' + trainingText.length + ' characters', 'info');
+
+                log('Training tokenizer with ' + config.numMerges + ' merges...', 'info');
+                tokenizer.train(trainingText, config.numMerges);
+                log('Final vocabulary size: ' + tokenizer.getVocabSize(), 'success');
+
+                log('───────────────────────────────────────────────────────────', 'info');
+                log('STEP 2: Tokenizing training data...', 'info');
+                const tokens = tokenizer.encode(trainingText);
+                log('Encoded ' + trainingText.length + ' chars -> ' + tokens.length + ' tokens', 'info');
+
+                log('───────────────────────────────────────────────────────────', 'info');
+                log('STEP 3: Creating model...', 'info');
+                const vocabSize = tokenizer.getVocabSize();
+
+                model = new GabGPT(
+                    vocabSize,
+                    config.embeddingDim,
+                    config.numHeads,
+                    config.numBlocks,
+                    config.maxSeqLength
+                );
+                log('Model created successfully', 'success');
+
+                // Optionally use Adam optimizer
+                if (config.useAdam) {
+                    optimizer = new AdamOptimizer(config.learningRate);
+                    model.useOptimizer(optimizer);
+                    log('Adam optimizer attached (lr=' + config.learningRate + ')', 'success');
+                } else {
+                    optimizer = null;
+                    log('Using SGD with learning rate warmup', 'info');
+                }
+
+                log('───────────────────────────────────────────────────────────', 'info');
+                log('STEP 4: Creating training batches...', 'info');
+                batches = createBatches(tokens, config.batchSize, config.seqLength);
+                log('Created ' + batches.length + ' batches', 'info');
+
+                if (batches.length === 0) {
+                    log('ERROR: No batches created! Training data may be too short.', 'error');
+                    self.postMessage({ type: 'error', data: 'Training data too short' });
+                    return;
+                }
+
+                totalSteps = config.numEpochs * batches.length;
+                warmupSteps = Math.floor(totalSteps * config.warmupRatio);
+                log('Total training steps: ' + totalSteps, 'info');
+
+                log('═══════════════════════════════════════════════════════════', 'info');
+                log('STARTING TRAINING LOOP', 'epoch');
+                log('═══════════════════════════════════════════════════════════', 'info');
+
+                self.trainingConfig = config;
+                continueTraining();
+
+            } catch (err) {
+                log('Training error: ' + err.message, 'error');
+                self.postMessage({ type: 'error', data: err.message });
+            }
+        }
+
+        function continueTraining() {
+            if (shouldStop) {
+                log('Training stopped', 'warning');
+                self.postMessage({ type: 'stopped' });
+                return;
+            }
+
+            if (isPaused) return;
+
+            const config = self.trainingConfig;
+
+            try {
+                if (currentEpoch < config.numEpochs) {
+                    if (currentBatchIndex === 0) {
+                        log('───────────────────────────────────────────────────────────', 'info');
+                        log('EPOCH ' + (currentEpoch + 1) + '/' + config.numEpochs + ' STARTED', 'epoch');
+                        self.epochLosses = [];
+                    }
+
+                    if (currentBatchIndex < batches.length) {
+                        const batch = batches[currentBatchIndex];
+                        const lr = getLearningRate(currentStep, warmupSteps, totalSteps, baseLearningRate);
+
+                        const loss = model.train(batch.inputs, batch.targets, lr);
+                        self.epochLosses.push(loss);
+
+                        if (currentStep % logEvery === 0 || currentBatchIndex === 0 || currentBatchIndex === batches.length - 1) {
+                            log('  Step ' + (currentStep + 1) + '/' + totalSteps +
+                                ' | Loss: ' + loss.toFixed(6) +
+                                ' | LR: ' + lr.toFixed(6), 'loss');
+                        }
+
+                        const progress = ((currentStep + 1) / totalSteps) * 100;
+                        updateProgress({ percent: progress });
+
+                        const avgLoss = self.epochLosses.reduce((a, b) => a + b, 0) / self.epochLosses.length;
+                        updateStats({
+                            epoch: currentEpoch + 1,
+                            step: currentStep + 1,
+                            loss: loss.toFixed(4),
+                            avgLoss: avgLoss.toFixed(4)
+                        });
+
+                        currentStep++;
+                        currentBatchIndex++;
+
+                        setTimeout(continueTraining, 0);
+                    } else {
+                        const avgLoss = self.epochLosses.reduce((a, b) => a + b, 0) / self.epochLosses.length;
+                        log('EPOCH ' + (currentEpoch + 1) + ' COMPLETE | Avg Loss: ' + avgLoss.toFixed(6), 'success');
+
+                        currentEpoch++;
+                        currentBatchIndex = 0;
+
+                        setTimeout(continueTraining, 0);
+                    }
+                } else {
+                    log('═══════════════════════════════════════════════════════════', 'info');
+                    log('TRAINING COMPLETE!', 'success');
+                    log('═══════════════════════════════════════════════════════════', 'info');
+
+                    self.postMessage({ type: 'complete' });
+                }
+            } catch (err) {
+                log('Error during training: ' + err.message, 'error');
+                self.postMessage({ type: 'error', data: err.message });
+            }
+        }
+
+        function sendCurrentState() {
+            if (!model || !tokenizer) {
+                self.postMessage({ type: 'state', data: null });
+                return;
+            }
+
+            try {
+                const modelBytes = model.serialize();
+                const tokenizerBytes = tokenizer.serialize();
+
+                const state = {
+                    config: self.trainingConfig,
+                    modelBytes: Array.from(modelBytes),
+                    tokenizerBytes: Array.from(tokenizerBytes),
+                    currentEpoch: currentEpoch,
+                    currentBatchIndex: currentBatchIndex,
+                    currentStep: currentStep,
+                    totalSteps: totalSteps,
+                    warmupSteps: warmupSteps
+                };
+
+                log('State serialized: model=' + modelBytes.length + ' bytes, tokenizer=' + tokenizerBytes.length + ' bytes', 'info');
+                self.postMessage({ type: 'state', data: state });
+            } catch (err) {
+                log('Error serializing state: ' + err.message, 'error');
+                self.postMessage({ type: 'state', data: null });
+            }
+        }
+
+        function loadState(state) {
+            try {
+                log('═══════════════════════════════════════════════════════════', 'info');
+                log('LOADING SAVED TRAINING STATE', 'epoch');
+                log('═══════════════════════════════════════════════════════════', 'info');
+
+                self.trainingConfig = state.config;
+                baseLearningRate = state.config.learningRate;
+                logEvery = state.config.logEvery || 1;
+
+                log('Restoring tokenizer...', 'info');
+                const tokenizerBytes = new Uint8Array(state.tokenizerBytes);
+                tokenizer = Tokenizer.deserialize(tokenizerBytes);
+                log('Tokenizer restored, vocab size: ' + tokenizer.getVocabSize(), 'success');
+
+                log('Restoring model...', 'info');
+                const modelBytes = new Uint8Array(state.modelBytes);
+                model = GabGPT.deserialize(modelBytes);
+                log('Model restored successfully', 'success');
+
+                // Optionally recreate Adam optimizer
+                if (state.config.useAdam) {
+                    optimizer = new AdamOptimizer(state.config.learningRate);
+                    model.useOptimizer(optimizer);
+                    log('Adam optimizer recreated (lr=' + state.config.learningRate + ')', 'success');
+                    log('Note: Optimizer momentum state is reset on load', 'warning');
+                } else {
+                    optimizer = null;
+                    log('Using SGD with learning rate warmup', 'info');
+                }
+
+                currentEpoch = state.currentEpoch;
+                currentBatchIndex = state.currentBatchIndex;
+                currentStep = state.currentStep;
+                totalSteps = state.totalSteps;
+                warmupSteps = state.warmupSteps;
+
+                log('Recreating training batches...', 'info');
+                const tokens = tokenizer.encode(state.config.trainingData);
+                batches = createBatches(tokens, state.config.batchSize, state.config.seqLength);
+                log('Batches recreated: ' + batches.length, 'info');
+
+                log('Training state restored at epoch ' + (currentEpoch + 1) + ', step ' + currentStep, 'success');
+
+                const progress = (currentStep / totalSteps) * 100;
+                updateProgress({ percent: progress });
+                updateStats({
+                    epoch: currentEpoch + 1,
+                    step: currentStep,
+                    loss: '-',
+                    avgLoss: '-'
+                });
+
+                self.postMessage({ type: 'stateLoaded' });
+
+            } catch (err) {
+                log('Error loading state: ' + err.message, 'error');
+                self.postMessage({ type: 'error', data: err.message });
+            }
+        }
+    </script>
+
+    <script>
+        // ============================================================================
+        // MAIN APPLICATION CODE
+        // ============================================================================
+
+        class TrainerApp {
+            constructor() {
+                this.worker = null;
+                this.currentMode = 'pretrain-direct';
+                this.reservedKeywords = [];
+                this.isTraining = false;
+                this.isPaused = false;
+                this.hasTrainedModel = false;
+                this.trainingData = '';
+                this.logBuffer = [];
+                this.maxLogEntries = 1000;
+
+                this.initializeUI();
+                this.initializeWorker();
+            }
+
+            initializeUI() {
+                const modeOptions = document.querySelectorAll('.mode-option');
+                for (let i = 0; i < modeOptions.length; i++) {
+                    const option = modeOptions[i];
+                    option.addEventListener('click', () => this.selectMode(option.dataset.mode));
+                }
+
+                const fileInput = document.getElementById('trainingFile');
+                fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+
+                const keywordInput = document.getElementById('newKeyword');
+                keywordInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.addKeyword();
+                });
+
+                this.updateStatus('idle', 'Idle');
+            }
+
+            initializeWorker() {
+                const workerCode = document.getElementById('workerCode').textContent;
+                const blob = new Blob([workerCode], { type: 'application/javascript' });
+                const workerUrl = URL.createObjectURL(blob);
+
+                this.worker = new Worker(workerUrl);
+                this.worker.onmessage = (e) => this.handleWorkerMessage(e);
+                this.worker.onerror = (e) => this.handleWorkerError(e);
+                this.sendGabCodeToWorker();
+            }
+
+            async sendGabCodeToWorker() {
+                try {
+                    const response = await fetch('gab.js');
+                    const gabCode = await response.text();
+                    this.worker.postMessage({ action: 'init', payload: { gabCode } });
+                } catch (err) {
+                    this.log('Failed to load gab.js: ' + err.message, 'error');
+                }
+            }
+
+            handleWorkerMessage(e) {
+                const { type, data } = e.data;
+
+                switch (type) {
+                    case 'initialized':
+                        this.log('Worker ready', 'success');
+                        break;
+                    case 'log':
+                        this.log(data.message, data.logType);
+                        break;
+                    case 'progress':
+                        this.updateProgressBar(data.percent);
+                        break;
+                    case 'stats':
+                        this.updateStats(data);
+                        break;
+                    case 'paused':
+                        this.isPaused = true;
+                        this.updateStatus('paused', 'Paused');
+                        this.updateButtons();
+                        break;
+                    case 'resumed':
+                        this.isPaused = false;
+                        this.updateStatus('training', 'Training...');
+                        this.updateButtons();
+                        break;
+                    case 'stopped':
+                        this.isTraining = false;
+                        this.isPaused = false;
+                        this.updateStatus('idle', 'Stopped');
+                        this.updateButtons();
+                        break;
+                    case 'complete':
+                        this.isTraining = false;
+                        this.isPaused = false;
+                        this.hasTrainedModel = true;
+                        this.updateStatus('idle', 'Complete');
+                        this.updateButtons();
+                        break;
+                    case 'error':
+                        this.isTraining = false;
+                        this.isPaused = false;
+                        this.updateStatus('error', 'Error');
+                        this.updateButtons();
+                        break;
+                    case 'state':
+                        this.handleStateReceived(data);
+                        break;
+                    case 'stateLoaded':
+                        this.isTraining = false;
+                        this.isPaused = true;
+                        this.hasTrainedModel = true;
+                        this.updateStatus('paused', 'Loaded (Paused)');
+                        this.updateButtons();
+                        break;
+                }
+            }
+
+            handleWorkerError(e) {
+                this.log('Worker error: ' + e.message, 'error');
+                this.updateStatus('error', 'Error');
+            }
+
+            selectMode(mode) {
+                this.currentMode = mode;
+
+                const modeOptions = document.querySelectorAll('.mode-option');
+                for (let i = 0; i < modeOptions.length; i++) {
+                    const option = modeOptions[i];
+                    if (option.dataset.mode === mode) {
+                        option.classList.add('active');
+                    } else {
+                        option.classList.remove('active');
+                    }
+                }
+
+                const directSection = document.getElementById('directInputSection');
+                const fileSection = document.getElementById('fileInputSection');
+                const inputHint = document.getElementById('inputHint');
+
+                if (mode === 'pretrain-direct' || mode === 'sft-direct') {
+                    directSection.classList.remove('hidden');
+                    fileSection.classList.add('hidden');
+                } else {
+                    directSection.classList.add('hidden');
+                    fileSection.classList.remove('hidden');
+                }
+
+                if (mode.startsWith('pretrain')) {
+                    inputHint.textContent = 'For pre-training, enter raw text. Model learns to predict next token.';
+                } else {
+                    inputHint.textContent = 'For SFT, use ChatML format: <|user|>message<|end|><|assistant|>response<|end|>';
+                }
+
+                const pretrainHint = document.getElementById('pretrainFileHint');
+                const sftHint = document.getElementById('sftFileHint');
+
+                if (mode.startsWith('pretrain')) {
+                    if (pretrainHint) pretrainHint.classList.remove('hidden');
+                    if (sftHint) sftHint.classList.add('hidden');
+                } else {
+                    if (pretrainHint) pretrainHint.classList.add('hidden');
+                    if (sftHint) sftHint.classList.remove('hidden');
+                }
+            }
+
+            handleFileUpload(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    let content = event.target.result;
+                    const fileName = file.name.toLowerCase();
+
+                    if (this.currentMode.startsWith('sft')) {
+                        try {
+                            content = this.parseTrainingFile(content, fileName);
+                        } catch (err) {
+                            this.log('Failed to parse file: ' + err.message, 'error');
+                            return;
+                        }
+                    }
+
+                    this.trainingData = content;
+                    const fileInfo = document.getElementById('fileInfo');
+                    fileInfo.textContent = file.name + ' (' + this.formatBytes(file.size) + ')';
+                };
+                reader.readAsText(file);
+            }
+
+            parseTrainingFile(content, fileName) {
+                if (fileName.endsWith('.txt')) return content;
+
+                let conversations = [];
+
+                if (fileName.endsWith('.jsonl')) {
+                    const lines = content.split('\n').filter(line => line.trim());
+                    for (let i = 0; i < lines.length; i++) {
+                        try {
+                            const obj = JSON.parse(lines[i]);
+                            if (obj.messages) conversations.push(obj);
+                        } catch (err) {}
+                    }
+                } else if (fileName.endsWith('.json')) {
+                    const data = JSON.parse(content);
+                    if (Array.isArray(data)) conversations = data;
+                    else if (data.messages) conversations = [data];
+                }
+
+                let chatML = '';
+                for (let i = 0; i < conversations.length; i++) {
+                    const conv = conversations[i];
+                    if (!conv.messages) continue;
+
+                    for (let j = 0; j < conv.messages.length; j++) {
+                        const msg = conv.messages[j];
+                        const role = msg.role || 'user';
+                        const content = msg.content || '';
+
+                        if (role === 'system') chatML += '<|system|>' + content + '<|end|>';
+                        else if (role === 'user') chatML += '<|user|>' + content + '<|end|>';
+                        else if (role === 'assistant') chatML += '<|assistant|>' + content + '<|end|>';
+                    }
+                }
+
+                return chatML;
+            }
+
+            formatBytes(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+
+            addKeyword(keyword = null) {
+                const input = document.getElementById('newKeyword');
+                const value = keyword || input.value.trim();
+
+                if (value && !this.reservedKeywords.includes(value)) {
+                    this.reservedKeywords.push(value);
+                    this.updateKeywordsList();
+                    input.value = '';
+                }
+            }
+
+            removeKeyword(keyword) {
+                const index = this.reservedKeywords.indexOf(keyword);
+                if (index > -1) {
+                    this.reservedKeywords.splice(index, 1);
+                    this.updateKeywordsList();
+                }
+            }
+
+            updateKeywordsList() {
+                const list = document.getElementById('keywordsList');
+                list.innerHTML = '';
+
+                for (let i = 0; i < this.reservedKeywords.length; i++) {
+                    const keyword = this.reservedKeywords[i];
+                    const tag = document.createElement('span');
+                    tag.className = 'keyword-tag';
+                    tag.innerHTML = '<code>' + this.escapeHtml(keyword) + '</code><button onclick="app.removeKeyword(\'' + this.escapeHtml(keyword).replace(/'/g, "\\'") + '\')">×</button>';
+                    list.appendChild(tag);
+                }
+            }
+
+            addChatMLKeywords() {
+                const chatMLKeywords = ['<|user|>', '<|assistant|>', '<|system|>', '<|end|>', '<|pad|>', '<|think|>', '<|/think|>'];
+                for (let i = 0; i < chatMLKeywords.length; i++) {
+                    this.addKeyword(chatMLKeywords[i]);
+                }
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            getTrainingData() {
+                if (this.currentMode.includes('direct')) {
+                    return document.getElementById('trainingDataText').value;
+                }
+                return this.trainingData;
+            }
+
+            getConfig() {
+                return {
+                    mode: this.currentMode,
+                    trainingData: this.getTrainingData(),
+                    embeddingDim: parseInt(document.getElementById('embeddingDim').value),
+                    numHeads: parseInt(document.getElementById('numHeads').value),
+                    numBlocks: parseInt(document.getElementById('numBlocks').value),
+                    maxSeqLength: parseInt(document.getElementById('maxSeqLength').value),
+                    numMerges: parseInt(document.getElementById('numMerges').value),
+                    reservedKeywords: this.reservedKeywords.slice(),
+                    numEpochs: parseInt(document.getElementById('numEpochs').value),
+                    batchSize: parseInt(document.getElementById('batchSize').value),
+                    seqLength: parseInt(document.getElementById('seqLength').value),
+                    learningRate: parseFloat(document.getElementById('learningRate').value),
+                    warmupRatio: parseFloat(document.getElementById('warmupRatio').value),
+                    logEvery: parseInt(document.getElementById('logEvery').value),
+                    useAdam: document.getElementById('useAdam').checked
+                };
+            }
+
+            validateConfig(config) {
+                const errors = [];
+                if (!config.trainingData || config.trainingData.length === 0) errors.push('Training data is required');
+                if (config.embeddingDim % config.numHeads !== 0) errors.push('Embedding dimension must be divisible by number of attention heads');
+                if (config.seqLength > config.maxSeqLength) errors.push('Sequence length cannot exceed max sequence length');
+                return errors;
+            }
+
+            startTraining() {
+                const config = this.getConfig();
+                const errors = this.validateConfig(config);
+
+                if (errors.length > 0) {
+                    for (let i = 0; i < errors.length; i++) {
+                        this.log('Validation error: ' + errors[i], 'error');
+                    }
+                    return;
+                }
+
+                this.isTraining = true;
+                this.isPaused = false;
+                this.hasTrainedModel = true;
+                this.updateStatus('training', 'Training...');
+                this.updateButtons();
+                this.clearLogs();
+                this.updateProgressBar(0);
+
+                this.worker.postMessage({ action: 'start', payload: config });
+            }
+
+            pauseTraining() {
+                this.worker.postMessage({ action: 'pause' });
+            }
+
+            resumeTraining() {
+                this.worker.postMessage({ action: 'resume' });
+            }
+
+            stopTraining() {
+                this.worker.postMessage({ action: 'stop' });
+            }
+
+            updateButtons() {
+                document.getElementById('startBtn').disabled = this.isTraining;
+                document.getElementById('pauseBtn').disabled = !this.isTraining || this.isPaused;
+                document.getElementById('resumeBtn').disabled = !this.isPaused;
+                document.getElementById('stopBtn').disabled = !this.isTraining && !this.isPaused;
+            }
+
+            updateStatus(state, text) {
+                const dot = document.getElementById('statusDot');
+                const statusText = document.getElementById('statusText');
+                dot.className = 'status-dot ' + state;
+                statusText.textContent = text;
+            }
+
+            updateProgressBar(percent) {
+                const bar = document.getElementById('progressBar');
+                const label = document.getElementById('progressLabel');
+                bar.style.width = percent + '%';
+                label.textContent = percent.toFixed(1) + '% complete';
+            }
+
+            updateStats(stats) {
+                document.getElementById('currentEpoch').textContent = stats.epoch;
+                document.getElementById('currentStep').textContent = stats.step;
+                document.getElementById('currentLoss').textContent = stats.loss;
+                document.getElementById('avgLoss').textContent = stats.avgLoss;
+            }
+
+            log(message, type = 'info') {
+                const container = document.getElementById('logContainer');
+                const timestamp = new Date().toLocaleTimeString();
+
+                const entry = document.createElement('div');
+                entry.className = 'log-' + type;
+                entry.textContent = '[' + timestamp + '] ' + message;
+                container.appendChild(entry);
+                container.scrollTop = container.scrollHeight;
+
+                while (container.children.length > this.maxLogEntries) {
+                    container.removeChild(container.firstChild);
+                }
+            }
+
+            clearLogs() {
+                document.getElementById('logContainer').innerHTML = '';
+            }
+
+            pendingStateCallback = null;
+
+            saveSession() {
+                if (!this.hasTrainedModel && !this.isTraining && !this.isPaused) {
+                    this.log('No training session to save', 'warning');
+                    return;
+                }
+
+                this.pendingStateCallback = (state) => {
+                    if (!state) {
+                        this.log('Failed to get training state', 'error');
+                        return;
+                    }
+
+                    const session = { version: 1, timestamp: new Date().toISOString(), state: state };
+                    const json = JSON.stringify(session);
+                    const blob = new Blob([json], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'gabgpt-session-' + Date.now() + '.gabs';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    this.log('Session saved successfully', 'success');
+                };
+
+                this.worker.postMessage({ action: 'getState' });
+            }
+
+            handleStateReceived(state) {
+                if (this.pendingStateCallback) {
+                    this.pendingStateCallback(state);
+                    this.pendingStateCallback = null;
+                }
+            }
+
+            loadSession(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const session = JSON.parse(e.target.result);
+                        if (session.version !== 1) {
+                            this.log('Unsupported session version', 'error');
+                            return;
+                        }
+                        this.worker.postMessage({ action: 'loadState', payload: session.state });
+                    } catch (err) {
+                        this.log('Failed to load session: ' + err.message, 'error');
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            }
+
+            exportModel() {
+                if (!this.hasTrainedModel) {
+                    this.log('No model to export', 'warning');
+                    return;
+                }
+
+                this.pendingStateCallback = (state) => {
+                    if (!state || !state.modelBytes) {
+                        this.log('Failed to get model state', 'error');
+                        return;
+                    }
+
+                    const bytes = new Uint8Array(state.modelBytes);
+                    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'model-' + Date.now() + '.gab';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    this.log('Model exported (' + bytes.length + ' bytes)', 'success');
+                };
+
+                this.worker.postMessage({ action: 'getState' });
+            }
+
+            importModel(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                this.log('Model import not yet implemented', 'warning');
+                event.target.value = '';
+            }
+
+            exportTokenizer() {
+                if (!this.hasTrainedModel) {
+                    this.log('No tokenizer to export', 'warning');
+                    return;
+                }
+
+                this.pendingStateCallback = (state) => {
+                    if (!state || !state.tokenizerBytes) {
+                        this.log('Failed to get tokenizer state', 'error');
+                        return;
+                    }
+
+                    const bytes = new Uint8Array(state.tokenizerBytes);
+                    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'tokenizer-' + Date.now() + '.bpe';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    this.log('Tokenizer exported (' + bytes.length + ' bytes)', 'success');
+                };
+
+                this.worker.postMessage({ action: 'getState' });
+            }
+
+            importTokenizer(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                this.log('Tokenizer import not yet implemented', 'warning');
+                event.target.value = '';
+            }
+        }
+
+        // Global functions
+        let app;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new TrainerApp();
+            setTimeout(updateParamEstimate, 100);
+        });
+
+        function startTraining() { app.startTraining(); }
+        function pauseTraining() { app.pauseTraining(); }
+        function resumeTraining() { app.resumeTraining(); }
+        function stopTraining() { app.stopTraining(); }
+        function clearLogs() { app.clearLogs(); }
+        function addKeyword() { app.addKeyword(); }
+        function addChatMLKeywords() { app.addChatMLKeywords(); }
+        function saveSession() { app.saveSession(); }
+        function loadSession(event) { app.loadSession(event); }
+        function exportModel() { app.exportModel(); }
+        function importModel(event) { app.importModel(event); }
+        function exportTokenizer() { app.exportTokenizer(); }
+        function importTokenizer(event) { app.importTokenizer(event); }
+
+        function updateParamEstimate() {
+            const embeddingDim = parseInt(document.getElementById('embeddingDim').value) || 512;
+            const numHeads = parseInt(document.getElementById('numHeads').value) || 8;
+            const numBlocks = parseInt(document.getElementById('numBlocks').value) || 6;
+            const maxSeqLength = parseInt(document.getElementById('maxSeqLength').value) || 512;
+            const numMerges = parseInt(document.getElementById('numMerges').value) || 1500;
+
+            const vocabSize = 256 + numMerges;
+            const hiddenDim = embeddingDim * 4;
+
+            let paramCount = vocabSize * embeddingDim + maxSeqLength * embeddingDim;
+
+            for (let i = 0; i < numBlocks; i++) {
+                paramCount += 2 * embeddingDim;
+                paramCount += 4 * embeddingDim * embeddingDim;
+                paramCount += 2 * embeddingDim;
+                paramCount += hiddenDim * (embeddingDim + 1);
+                paramCount += embeddingDim * (hiddenDim + 1);
+            }
+
+            paramCount += 2 * embeddingDim;
+            paramCount += embeddingDim * vocabSize + vocabSize;
+
+            let paramStr;
+            if (paramCount >= 1e9) paramStr = '~' + (paramCount / 1e9).toFixed(1) + 'B';
+            else if (paramCount >= 1e6) paramStr = '~' + (paramCount / 1e6).toFixed(1) + 'M';
+            else if (paramCount >= 1e3) paramStr = '~' + (paramCount / 1e3).toFixed(0) + 'K';
+            else paramStr = '~' + paramCount;
+
+            document.getElementById('paramEstimate').textContent = paramStr;
+            document.getElementById('paramHint').textContent = '(vocab ~' + vocabSize.toLocaleString() + ')';
+
+            if (embeddingDim % numHeads !== 0) {
+                document.getElementById('paramHint').textContent = 'Embed dim must be divisible by heads!';
+                document.getElementById('paramHint').style.color = 'var(--danger)';
+            } else {
+                document.getElementById('paramHint').style.color = 'var(--muted)';
+            }
+        }
+
+        function applyPreset(size) {
+            const presets = {
+                small: { embeddingDim: 64, numHeads: 4, numBlocks: 4, maxSeqLength: 128, numMerges: 500, seqLength: 64, learningRate: 0.001 },
+                medium: { embeddingDim: 512, numHeads: 8, numBlocks: 6, maxSeqLength: 512, numMerges: 1500, seqLength: 256, learningRate: 0.0003 },
+                large: { embeddingDim: 1536, numHeads: 16, numBlocks: 24, maxSeqLength: 1024, numMerges: 4000, seqLength: 512, learningRate: 0.0001 }
+            };
+
+            const preset = presets[size];
+            if (!preset) return;
+
+            document.getElementById('embeddingDim').value = preset.embeddingDim;
+            document.getElementById('numHeads').value = preset.numHeads;
+            document.getElementById('numBlocks').value = preset.numBlocks;
+            document.getElementById('maxSeqLength').value = preset.maxSeqLength;
+            document.getElementById('numMerges').value = preset.numMerges;
+            document.getElementById('seqLength').value = preset.seqLength;
+            document.getElementById('learningRate').value = preset.learningRate;
+
+            updateParamEstimate();
+        }
+    </script>
+</body>
+</html>

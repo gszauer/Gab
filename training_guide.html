@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Guide - Quick Reference</title>
+    <meta name="theme-color" content="#0A0A0F"/>
+    <meta name="description" content="A practical guide to language model training parameters. Learn about tokenizers, model architecture, training settings, and fine-tuning modes." />
+    <style>
+        :root{
+            --bg:#0a0a0f;
+            --bg-2:#0e0e16;
+            --panel:#12121c;
+            --panel-2:#171726;
+            --text:#e9e9f2;
+            --muted:#a5a7bf;
+            --line:#1e1e2e;
+            --pink:#ff2e88;
+            --pink-2:#ff86c3;
+            --glow: 0 0 .5rem var(--pink), 0 0 1.25rem color-mix(in oklab, var(--pink) 70%, white 0%), 0 0 2.5rem color-mix(in oklab, var(--pink) 35%, black 65%);
+            --radius:16px;
+            --pad: clamp(14px, 1.6vw, 22px);
+            --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+            --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        *{box-sizing:border-box}
+        html,body{min-height:100%}
+        body{
+            margin:0;
+            font-family:var(--font);
+            color:var(--text);
+            background:
+                radial-gradient(1200px 520px at 50% -160px, rgba(255,46,136,.12), transparent 75%),
+                linear-gradient(180deg, #090914 0%, #050509 45%, #030306 75%, #020203 100%);
+            background-color:#020203;
+            background-repeat:no-repeat, no-repeat;
+            background-size:130% 70%, 100% 100%;
+            background-position:center top, center top;
+            background-attachment: fixed;
+            line-height:1.6;
+            overflow-x:hidden;
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+        }
+
+        /* Subtle scanlines for retro vibe */
+        body::before{
+            content:"";
+            position:fixed; inset:0;
+            pointer-events:none;
+            background-image: linear-gradient(rgba(255,255,255,.03),rgba(255,255,255,0) 2px);
+            background-size:100% 3px; mix-blend-mode:overlay; opacity:.25;
+        }
+        @media (prefers-reduced-motion: reduce){
+            body::before{display:none}
+            *{animation: none !important; transition: none !important}
+        }
+
+        .container{width:min(1000px, 92vw); margin-inline:auto}
+
+        /* Header */
+        header{
+            background: linear-gradient(180deg, #131321, #11111c);
+            border-bottom: 1px solid var(--line);
+            padding: 1.5rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        nav{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .logo{
+            font-weight: 900;
+            font-size: 1.25rem;
+            color: var(--text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo .pink{
+            color: var(--pink);
+            text-shadow: var(--glow);
+        }
+
+        .back-btn{
+            appearance:none;
+            border:1px solid color-mix(in oklab, var(--pink) 35%, #ffffff00 65%);
+            color:var(--text);
+            background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+            padding:.45rem .85rem;
+            border-radius: 999px;
+            cursor:pointer;
+            font-weight:600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.9rem;
+            transition: transform .12s ease, box-shadow .15s ease;
+        }
+
+        .back-btn:hover{
+            box-shadow: var(--glow);
+            transform: translateY(-1px);
+        }
+
+        /* Article Hero */
+        .article-hero{
+            padding: 3rem 0 2rem;
+            position: relative;
+        }
+
+        .grid-bg{
+            position:absolute; inset:0; pointer-events:none; z-index:-1; opacity:.25;
+            background:
+                radial-gradient(circle at 50% -60px, color-mix(in oklab, var(--pink) 30%, transparent), transparent 35%),
+                repeating-linear-gradient(0deg, #ffffff10 0 1px, transparent 1px 36px),
+                repeating-linear-gradient(90deg, #ffffff10 0 1px, transparent 1px 36px);
+            mask: radial-gradient(1200px 600px at 50% 0, black 40%, transparent 80%);
+        }
+
+        h1{
+            font-size: clamp(32px, 5vw, 48px);
+            line-height: 1.1;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--text) 0%, var(--pink) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .article-meta{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .article-meta span{
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .article-blurb{
+            font-size: 1.125rem;
+            line-height: 1.6;
+            color: #d9d9ec;
+            max-width: 800px;
+        }
+
+        /* Article Content */
+        article{
+            background: linear-gradient(180deg, #131321, #11111c);
+            border: 1px solid #222238;
+            border-radius: var(--radius);
+            padding: 2.5rem;
+            margin: 2rem 0 3rem;
+            box-shadow: 0 18px 50px rgba(0,0,0,.45), 0 0 60px -10px rgba(255,46,136,.15);
+        }
+
+        article h1{
+            color: var(--text);
+            margin: 2.5rem 0 1rem 0;
+            font-size: 2.25rem;
+            font-weight: 900;
+            position: relative;
+            padding-bottom: 0.75rem;
+            background: none;
+            -webkit-text-fill-color: var(--text);
+        }
+
+        article h1::after{
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 80px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--pink), transparent);
+        }
+
+        article h1:first-child{
+            margin-top: 0;
+        }
+
+        article h2{
+            color: var(--text);
+            margin: 2.5rem 0 1rem 0;
+            font-size: 1.875rem;
+            font-weight: 800;
+            position: relative;
+            padding-bottom: 0.75rem;
+        }
+
+        article h2::after{
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--pink), transparent);
+        }
+
+        article h2:first-child{
+            margin-top: 0;
+        }
+
+        article h3{
+            color: var(--text);
+            margin: 2rem 0 1rem 0;
+            font-size: 1.375rem;
+            font-weight: 700;
+        }
+
+        article h4{
+            color: var(--text);
+            margin: 1.5rem 0 0.75rem 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        article p{
+            margin-bottom: 1.25rem;
+            color: #d9d9ec;
+            line-height: 1.7;
+        }
+
+        article ul, article ol{
+            margin: 1.25rem 0;
+            padding-left: 1.75rem;
+            color: #d9d9ec;
+        }
+
+        article li{
+            margin-bottom: 0.5rem;
+            line-height: 1.7;
+        }
+
+        article strong{
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        /* Links within article content */
+        article a{
+            color: var(--pink-2);
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255, 134, 195, 0.3);
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        article a:hover{
+            color: var(--pink);
+            border-bottom-color: var(--pink);
+            text-shadow: 0 0 8px rgba(255, 46, 136, 0.4);
+        }
+
+        article a:visited{
+            color: color-mix(in oklab, var(--pink-2) 80%, var(--muted) 20%);
+        }
+
+        /* Code blocks */
+        pre{
+            background: #0f0f1b;
+            border: 1px solid #2a2a3a;
+            color: #e2e8f0;
+            padding: 1.25rem;
+            border-radius: 12px;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            font-family: var(--mono);
+            font-size: 0.875rem;
+            line-height: 1.6;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,.3);
+        }
+
+        pre.ascii-diagram{
+            background: #0a0a14;
+            border: 1px solid color-mix(in oklab, var(--pink) 25%, #2a2a3a 75%);
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        code{
+            font-family: var(--mono);
+            font-size: 0.9em;
+            background: rgba(255, 46, 136, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            color: var(--pink-2);
+        }
+
+        pre code{
+            background: none;
+            padding: 0;
+            color: #e2e8f0;
+        }
+
+        /* Tables */
+        table{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: var(--panel);
+            border: 1px solid #2a2a3a;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th{
+            background: linear-gradient(180deg, color-mix(in oklab, var(--pink) 15%, var(--panel) 85%), var(--panel-2));
+            color: var(--text);
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid color-mix(in oklab, var(--pink) 30%, #2a2a3a 70%);
+        }
+
+        td{
+            padding: 0.75rem;
+            border-bottom: 1px solid #2a2a3a;
+            color: #d9d9ec;
+        }
+
+        tr:last-child td{
+            border-bottom: none;
+        }
+
+        tr:hover{
+            background: rgba(255, 46, 136, 0.05);
+        }
+
+        /* Blockquotes */
+        blockquote{
+            border-left: 3px solid var(--pink);
+            background: #0a0a14;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+            font-style: italic;
+            color: #d9d9ec;
+        }
+
+        blockquote p{
+            margin-bottom: 0.5rem;
+            margin-top: 0;
+        }
+
+        blockquote p:last-child{
+            margin-bottom: 0;
+        }
+
+        /* Horizontal rule */
+        hr{
+            border: none;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--pink), transparent);
+            margin: 2.5rem 0;
+        }
+
+        /* Navigation */
+        .article-nav{
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin: 3rem 0;
+            padding-top: 2rem;
+            border-top: 1px solid var(--line);
+        }
+
+        .nav-link{
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--pink-2);
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .nav-link:hover{
+            color: var(--pink);
+            transform: translateX(3px);
+        }
+
+        .nav-link.prev:hover{
+            transform: translateX(-3px);
+        }
+
+        /* Footer */
+        footer{
+            border-top: 1px solid var(--line);
+            background: #0a0a12;
+            color: var(--muted);
+            padding: 1rem 0 1.5rem;
+            font-size: 0.875rem;
+            margin-top: 4rem;
+        }
+
+        footer a{
+            color: var(--pink-2);
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255, 134, 195, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        footer a:hover{
+            color: var(--pink);
+            border-bottom-color: var(--pink);
+            text-shadow: 0 0 8px rgba(255, 46, 136, 0.4);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px){
+            article{
+                padding: 1.5rem;
+            }
+
+            h1{
+                font-size: 2rem;
+            }
+
+            .article-meta{
+                font-size: 0.8rem;
+                gap: 1rem;
+            }
+
+            pre{
+                padding: 1rem;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header/Navigation -->
+    <header>
+        <nav class="container">
+            <a href="index.html" class="logo">
+                The Gift of <span class="pink">Gab</span>
+            </a>
+            <a href="index.html" class="back-btn">
+                Back to Home
+            </a>
+        </nav>
+    </header>
+
+    <!-- Main Article Content -->
+    <main class="container">
+        <article>
+            <h1>Quick Reference</h1>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>What It Controls</th>
+                        <th>Typical Range</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="3"><strong>Tokenizer</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Number of Merges</td>
+                        <td>Vocabulary size</td>
+                        <td>500 - 4000</td>
+                    </tr>
+                    <tr>
+                        <td colspan="3"><strong>Architecture</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Embedding Dimension</td>
+                        <td>Richness of word meanings</td>
+                        <td>64 - 1536</td>
+                    </tr>
+                    <tr>
+                        <td>Attention Heads</td>
+                        <td>Different "perspectives" on text</td>
+                        <td>4 - 16</td>
+                    </tr>
+                    <tr>
+                        <td>Transformer Blocks</td>
+                        <td>Depth of understanding</td>
+                        <td>2 - 24</td>
+                    </tr>
+                    <tr>
+                        <td>Max Sequence Length</td>
+                        <td>Memory window size</td>
+                        <td>128 - 1024</td>
+                    </tr>
+                    <tr>
+                        <td colspan="3"><strong>Training</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Epochs</td>
+                        <td>Training passes through data</td>
+                        <td>5 - 100+</td>
+                    </tr>
+                    <tr>
+                        <td>Batch Size</td>
+                        <td>Examples processed together</td>
+                        <td>1 - 16</td>
+                    </tr>
+                    <tr>
+                        <td>Learning Rate</td>
+                        <td>Speed of learning</td>
+                        <td>0.0001 - 0.001</td>
+                    </tr>
+                    <tr>
+                        <td>Warmup Ratio</td>
+                        <td>Gentle start to training</td>
+                        <td>0.05 - 0.2</td>
+                    </tr>
+                    <tr>
+                        <td>Use Adam Optimizer</td>
+                        <td>Smart adaptive learning</td>
+                        <td>On/Off. Ignores Learning Rate &amp; warmup if on</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <hr>
+
+            <h1>Part 1: Foundations</h1>
+
+            <h2>What is a Language Model?</h2>
+
+            <p>
+                A language model is a <strong>next-word predictor</strong>. When you type "The cat sat on the", the model predicts that "mat" is a likely next word. It does this repeatedly, one word at a time, building complete responses.
+            </p>
+
+            <pre><code>You type:        "What is the capital of France?"
+Model predicts:  "What is the capital of France? The"
+Model predicts:  "What is the capital of France? The answer"
+Model predicts:  "What is the capital of France? The answer is"
+Model predicts:  "What is the capital of France? The answer is Paris"
+Model predicts:  "What is the capital of France? The answer is Paris."</code></pre>
+
+            <p>
+                The model doesn't "know" things the way humans do. It has learned patterns from text&mdash;it has seen "capital of France" followed by "Paris" so many times that this pattern is burned into its memory.
+            </p>
+
+            <h2>How Does Training Work?</h2>
+
+            <p>
+                Training is how the model learns patterns. It "learns" by scanning the text from start to end one word at a time, and tries to guess what the next word is. During training it might be given a sentence like "The cat sat on the mat", training would:
+            </p>
+
+            <ol>
+                <li>The model sees text like "The cat sat on the"</li>
+                <li>It guesses the next word (maybe "floor")</li>
+                <li>It checks the real answer ("mat")</li>
+                <li>It adjusts its internal numbers to make "mat" more likely next time</li>
+            </ol>
+
+            <p>Repeat this billions of times, and you get a model that can write convincingly.</p>
+
+            <h2>Understanding Loss</h2>
+
+            <p>
+                <strong>Loss</strong> is your primary feedback signal during training. It measures how wrong the model's predictions are, in "nats" (natural log units).
+            </p>
+
+            <pre><code>Model predicts next word probabilities:
+  "cat": 10%
+  "floor": 60%  &larr; model's best guess
+  "mat": 5%
+  "hat": 25%
+
+Actual next word: "mat"
+
+Loss is HIGH because the model was confident about "floor" but the answer was "mat"</code></pre>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Loss</th>
+                        <th>What It Means</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>8-10</td>
+                        <td>Random guessing. Model hasn't learned anything yet</td>
+                    </tr>
+                    <tr>
+                        <td>5-7</td>
+                        <td>Basic patterns emerging. Common words recognized</td>
+                    </tr>
+                    <tr>
+                        <td>3-4</td>
+                        <td>Decent understanding. Grammar mostly correct</td>
+                    </tr>
+                    <tr>
+                        <td>2-3</td>
+                        <td>Good model. Coherent sentences, understands context</td>
+                    </tr>
+                    <tr>
+                        <td>1-2</td>
+                        <td>Strong model. Nuanced understanding</td>
+                    </tr>
+                    <tr>
+                        <td>&lt;1</td>
+                        <td>Exceptional (or possibly memorized!)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p><strong>What to watch for:</strong></p>
+            <ul>
+                <li>Loss decreasing steadily = good</li>
+                <li>Loss stuck high = learning rate too low or model too small</li>
+                <li>Loss jumping wildly = learning rate too high</li>
+                <li>Loss going back up = memorization (try stopping earlier)</li>
+            </ul>
+
+            <hr>
+
+            <h1>Part 2: The Tokenizer</h1>
+
+            <p>
+                Before the model can read text, it needs to convert words into numbers. The <strong>tokenizer</strong> handles this conversion. A token is a chunk of text that the model treats as a single unit. Tokens aren't always complete words&mdash;they can be sub-word pieces:
+            </p>
+
+            <pre><code>"Hello world" &rarr; ["Hello", " world"]    (notice the space is included!)
+
+"unhappiness" &rarr; ["un", "happiness"]
+
+"ChatGPT" &rarr; ["Chat", "G", "PT"]</code></pre>
+
+            <p>
+                Why break words apart? Because language has patterns at different levels. The prefix "un-" means "not" in many words (unhappy, unclear, unfair). By learning "un" as a separate token, the model can apply this knowledge across many words.
+            </p>
+
+            <p>
+                ChatGPT and The Gab tokenizer uses <strong>Byte Pair Encoding</strong> (BPE). Here's how it works:
+            </p>
+
+            <ol>
+                <li><strong>Start with individual characters.</strong> Every letter and symbol is its own token. Reserve 0-255 for ASCII/UTF8.</li>
+                <li><strong>Count pairs.</strong> Scan the text and count how often each pair of adjacent tokens appears.</li>
+                <li><strong>Merge the most common pair.</strong> Combine the most frequent pair into a new token.</li>
+                <li><strong>Repeat.</strong> Keep merging until you've done it a set number of times.</li>
+            </ol>
+
+            <p>Example:</p>
+
+            <pre><code>Training text: "the cat and the dog and the bird"
+
+Start: Every character is its own token
+  |t|h|e| |c|a|t| |a|n|d| |t|h|e| |d|o|g| |a|n|d| |t|h|e| |b|i|r|d|
+
+Merge 1: "t"+"h" appears 3 times &rarr; create token "th"
+  |th|e| |c|a|t| |a|n|d| |th|e| |d|o|g| |a|n|d| |th|e| |b|i|r|d|
+
+Merge 2: "th"+"e" appears 3 times &rarr; create token "the"
+  |the| |c|a|t| |a|n|d| |the| |d|o|g| |a|n|d| |the| |b|i|r|d|
+
+Merge 3: "the"+" " appears 3 times &rarr; create token "the "
+  |the |c|a|t| |a|n|d| |the |d|o|g| |a|n|d| |the |b|i|r|d|
+
+...after more merges, common words become single tokens!</code></pre>
+
+            <p>
+                Notice how "the" quickly became one token because it appeared so often. Rare words like "bird" stay as individual characters longer.
+            </p>
+
+            <h3>[CONFIG OPTION] Number of Merges</h3>
+
+            <p>This controls how many times the merging process runs.</p>
+
+            <ul>
+                <li><strong>More merges = Larger vocabulary.</strong> Common words become single tokens.</li>
+                <li><strong>Fewer merges = Smaller vocabulary.</strong> More words get split into pieces.</li>
+            </ul>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Merges</th>
+                        <th>Best For</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>500</td>
+                        <td>Small experiments, limited text</td>
+                    </tr>
+                    <tr>
+                        <td>1,500</td>
+                        <td>Medium projects</td>
+                    </tr>
+                    <tr>
+                        <td>5,000</td>
+                        <td>Larger projects with diverse text</td>
+                    </tr>
+                    <tr>
+                        <td>50,000</td>
+                        <td>GPT-2/3 scale</td>
+                    </tr>
+                    <tr>
+                        <td>100,000</td>
+                        <td>GPT-4 scale</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>[CONFIG OPTION] Reserved Tokens</h3>
+
+            <p>
+                You may want to reserve special tokens for conversation structure. These are common tokens that are used by ChatGPT to format a conversation. We will use them later:
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Token</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>&lt;|user|&gt;</code></td>
+                        <td>Marks the start of a user message</td>
+                    </tr>
+                    <tr>
+                        <td><code>&lt;|assistant|&gt;</code></td>
+                        <td>Marks the start of the AI's response</td>
+                    </tr>
+                    <tr>
+                        <td><code>&lt;|end|&gt;</code></td>
+                        <td>Marks the end of a message</td>
+                    </tr>
+                    <tr>
+                        <td><code>&lt;|pad|&gt;</code></td>
+                        <td>Padding for batching (internal use)</td>
+                    </tr>
+                    <tr>
+                        <td><code>&lt;|system|&gt;</code></td>
+                        <td>System instructions (optional)</td>
+                    </tr>
+                    <tr>
+                        <td><code>&lt;|think|&gt;</code></td>
+                        <td>Start of "thinking" section (optional)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>
+                You can also reserve common suffixes like <code>ing </code> (with trailing space) since words often end this way. You could also reserve <code> un</code>. Notice the space is in front this time.
+            </p>
+
+            <hr>
+
+            <h1>Part 3: Model Architecture</h1>
+
+            <p>These settings define the "shape" of your model, how big it is and how it processes information.</p>
+
+            <h3>[CONFIG OPTION] Embedding Dimension</h3>
+
+            <p>Every token is represented as a list of numbers. The <strong>embedding dimension</strong> is how long that list is.</p>
+
+            <pre><code>If embedding dimension is 64:
+  "cat" = [0.12, -0.34, 0.56, ... (64 numbers total)]
+  "dog" = [0.15, -0.29, 0.61, ... (64 numbers total)]</code></pre>
+
+            <p>
+                These numbers capture meaning. Similar words have similar numbers. The model learns during training that "cat" and "kitten" should have similar number patterns. Think of it like every number in the embedding dimension is one fact about the word that the AI can learn. The larger the dimension, the more nuance words have.
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Size</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Small (64)</td>
+                        <td>Basic meaning. "Cat" and "dog" are both "animals"</td>
+                    </tr>
+                    <tr>
+                        <td>Medium (512)</td>
+                        <td>Richer meaning. Can distinguish "cat" from "kitten"</td>
+                    </tr>
+                    <tr>
+                        <td>Large (1536+)</td>
+                        <td>Nuanced meaning. Understands "tabby cat" vs "Siamese cat"</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>[CONFIG OPTION] Attention Heads</h3>
+
+            <p>
+                <strong>Attention</strong> is how the model connects words to each other. When you read "The cat sat on the mat because <strong>it</strong> was tired", how do you know "it" refers to "the cat"? You pay attention to the context. The model does the same thing mathematically.
+            </p>
+
+            <p>Each <strong>attention head</strong> looks at the text from a different angle:</p>
+            <ul>
+                <li>Head 1 might focus on subjects and verbs ("cat" &rarr; "sat")</li>
+                <li>Head 2 might focus on pronouns and their references ("it" &rarr; "cat")</li>
+                <li>Head 3 might focus on describing words ("tired" &rarr; "cat")</li>
+            </ul>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Heads</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>4</td>
+                        <td>Simple text, basic relationships</td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>Standard choice for most projects</td>
+                    </tr>
+                    <tr>
+                        <td>16+</td>
+                        <td>Complex text with many relationships</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>
+                <strong>Important:</strong> The embedding dimension must be divisible by the number of heads. If embedding is 64 and you have 4 heads, each head works with 16 dimensions (64 &divide; 4 = 16).
+            </p>
+
+            <p><strong>Rule of thumb:</strong> embedding dimension &divide; attention heads = 64 (or at least 32-128).</p>
+
+            <h3>[CONFIG OPTION] Transformer Blocks</h3>
+
+            <p>
+                A <strong>transformer block</strong> is one complete round of processing (thinking), i.e., how many times does the AI look at a sentence as it's learning. Stacking multiple blocks is like re-reading a sentence multiple times:
+            </p>
+
+            <ul>
+                <li>Block 1: Basic understanding ("there's a cat, there's a mat")</li>
+                <li>Block 2: Relationships ("the cat is ON the mat")</li>
+                <li>Block 3: Deeper meaning ("this is describing a scene")</li>
+                <li>Block 4+: Nuance and context</li>
+            </ul>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Blocks</th>
+                        <th>Capability</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>2-4</td>
+                        <td>Simple patterns, short responses</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>Good for most conversational tasks</td>
+                    </tr>
+                    <tr>
+                        <td>12+</td>
+                        <td>Complex reasoning, longer context</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>
+                Deeper networks are smarter than wider ones for the same number of parameters. Each transformer block is a "round of thinking", more blocks means more reasoning steps.
+            </p>
+
+            <pre><code>Same ~20M parameters, different architectures:
+
+Wide (less capable):        Deep (more capable):
+  Embedding: 1024             Embedding: 512
+  Blocks: 3                   Blocks: 6
+  Heads: 8                    Heads: 8</code></pre>
+
+            <h3>[CONFIG OPTION] Max Sequence Length</h3>
+
+            <p>This is the maximum number of tokens the model can process. The model's "memory window."</p>
+
+            <p>A rough rule: 1 token &asymp; 0.75 words &asymp; 4 characters. So:</p>
+            <ul>
+                <li>128 tokens &asymp; 96 words &asymp; 512 characters</li>
+                <li>512 tokens &asymp; 380 words &asymp; 2,000 characters</li>
+                <li>1024 tokens &asymp; 750 words &asymp; 4,000 characters</li>
+            </ul>
+
+            <p>
+                Attention compares every token to every other token. With 128 tokens, that's 16,384 comparisons. With 512 tokens, it's 262,144 comparisons. You have to balance sequence length with the available memory of your computer.
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Length</th>
+                        <th>Typical Use</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>512</td>
+                        <td>Short responses, simple Q&amp;A</td>
+                    </tr>
+                    <tr>
+                        <td>2048</td>
+                        <td>Full conversations, longer context</td>
+                    </tr>
+                    <tr>
+                        <td>4096</td>
+                        <td>Extended discussions, complex tasks</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <hr>
+
+            <h1>Part 4: Training Parameters</h1>
+
+            <p>These settings control the learning process, how fast the model learns and how it processes training data.</p>
+
+            <h3>[CONFIG OPTION] Epochs</h3>
+
+            <p>
+                An <strong>epoch</strong> is one complete pass through your training data. If you have 1000 examples and run 10 epochs, the model sees each example 10 times.
+            </p>
+
+            <blockquote>
+                <p>When training on text, every word is an example. "The cat sat" has two examples: Given "the" predict "cat"; given "The cat" predict "sat".</p>
+            </blockquote>
+
+            <pre><code>Epoch 1: Model sees all data (makes lots of mistakes)
+Epoch 2: Model sees all data again (fewer mistakes)
+Epoch 3: Model sees all data again (getting better)
+...and so on</code></pre>
+
+            <p>The model needs to see lots of tokens. If your training data doesn't have enough, you need more epochs. For example, the Bee Movie script might need ~150 epochs.</p>
+
+            <h3>[CONFIG OPTION] Batch Size</h3>
+
+            <p>
+                Instead of learning from one example at a time, the model learns from a <strong>batch</strong> of examples together. This isn't predicting more words at once&mdash;it's predicting multiple sentences in parallel. Example with batch size 4:
+            </p>
+
+            <ul>
+                <li>sentence one is "Dog is an animal"</li>
+                <li>sentence two is "Cat is an animal"</li>
+                <li>sentence three is "cat is a pet"</li>
+                <li>sentence four is "animals are all pets"</li>
+            </ul>
+
+            <p>The model learns to predict these four at the same time. If we look at how predicting a batch of four works, we can get some intuition as to how AI can learn.</p>
+
+            <pre><code>Dog -&gt; is
+Cat -&gt; is
+Cat -&gt; is
+Animals -&gt; are</code></pre>
+
+            <pre><code>Dog is -&gt; an
+Cat is -&gt; an
+Cat is -&gt; a
+Animals are -&gt; all</code></pre>
+
+            <pre><code>Dog is an -&gt; animal
+Cat is an -&gt; animal
+Cat is a -&gt; pet
+Animals are all -&gt; pets</code></pre>
+
+            <p>
+                You can see how there are patterns to be found by considering all four training examples at once. With batching we learn richer information. The learning is more stable (one weird example doesn't throw everything off). And because work is batched, training is faster.
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Batch Size</th>
+                        <th>Tradeoff</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1-2</td>
+                        <td>Noisy updates, but works with limited memory</td>
+                    </tr>
+                    <tr>
+                        <td>4-8</td>
+                        <td>Good balance for most cases</td>
+                    </tr>
+                    <tr>
+                        <td>16+</td>
+                        <td>Smoother learning, needs more memory</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>Memory is the limiting factor. Start with a small batch, check memory usage, and adjust.</p>
+
+            <h3>[CONFIG OPTION] Sequence Length (Training)</h3>
+
+            <p>This is how many tokens you train on at once during each training step&mdash;different from Max Sequence Length in architecture.</p>
+
+            <pre><code>Book: "Once upon a time there was a princess who lived in a castle..."
+
+With sequence length 8:
+  Chunk 1: "Once upon a time there was a princess"
+  Chunk 2: "who lived in a castle the castle was"
+  ...</code></pre>
+
+            <p><strong>Should match or be smaller than Max Sequence Length.</strong> You can't train on 512-token chunks if your model only supports 256 tokens.</p>
+
+            <blockquote>
+                <p>In Gab, text is converted to tokens, then grouped into chunks (based on sequence length). Chunks are automatically grouped into batches.</p>
+            </blockquote>
+
+            <h3>[CONFIG OPTION] Learning Rate</h3>
+
+            <p>The most important training parameter. The <strong>learning rate</strong> controls how much the model adjusts after each batch.</p>
+
+            <p>Imagine learning to throw darts:</p>
+            <ul>
+                <li><strong>High learning rate:</strong> Dramatic adjustments after each throw. You might overshoot and never settle.</li>
+                <li><strong>Low learning rate:</strong> Tiny adjustments. You'll eventually hit the target, but it takes forever.</li>
+                <li><strong>Just right:</strong> Sensible adjustments, steady improvement.</li>
+            </ul>
+
+            <pre><code>Learning rate too high:
+  Loss: 5.2 &rarr; 3.1 &rarr; 7.8 &rarr; 4.2 &rarr; 9.1  (jumping around)
+
+Learning rate too low:
+  Loss: 5.2 &rarr; 5.1 &rarr; 5.0 &rarr; 4.99 &rarr; 4.98  (painfully slow)
+
+Learning rate just right:
+  Loss: 5.2 &rarr; 4.1 &rarr; 3.2 &rarr; 2.5 &rarr; 2.0  (steady improvement)</code></pre>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Model Size</th>
+                        <th>Learning Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Small (~300K params)</td>
+                        <td>0.001 (1e-3)</td>
+                    </tr>
+                    <tr>
+                        <td>Medium (~20M params)</td>
+                        <td>0.0003 (3e-4)</td>
+                    </tr>
+                    <tr>
+                        <td>Large (~1B params)</td>
+                        <td>0.0001 (1e-4)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>[CONFIG OPTION] Warmup Ratio</h3>
+
+            <p>Training starts with a <strong>warmup period</strong> where the learning rate gradually increases from zero to the target value.</p>
+
+            <p>If warmup ratio is 0.1 (10%) and you train for 1000 steps:</p>
+            <ul>
+                <li>Steps 1-100: Learning rate slowly rises from 0 to target</li>
+                <li>Steps 101-1000: Learning rate at full strength</li>
+            </ul>
+
+            <p>
+                <strong>Why warmup?</strong> At the start, the model's weights are random. Large updates could send them in wild directions. Warming up lets the model find its footing first. <strong>Recommended:</strong> 0.1 (10%) is a good default. More warmup for larger models.
+            </p>
+
+            <h3>[CONFIG OPTION] Use Adam Optimizer</h3>
+
+            <p>
+                <strong>SGD (Stochastic Gradient Descent)</strong> is the basic learning algorithm&mdash;it uses Learning Rate and Warmup Ratio and updates all parts of the model at the same rate.
+            </p>
+
+            <p>
+                <strong>Adam</strong> (Adaptive Moment Estimation) is smarter. It adapts the learning rate for each parameter individually. If one part of the model needs bigger updates, Adam gives it bigger updates.
+            </p>
+
+            <p>
+                When Adam is enabled, Learning Rate and Warmup Ratio are ignored&mdash;Adam figures out the right values after just a few hundred examples.
+            </p>
+
+            <p><strong>Recommended:</strong> Use Adam. Disable only for a more artisanal experience.</p>
+
+            <hr>
+
+            <h1>Part 5: Training Modes</h1>
+
+            <h2>Pre-Training</h2>
+
+            <p><strong>What it is:</strong> Teaching the model language from raw text.</p>
+
+            <p>
+                Feed the model books, articles, websites&mdash;any text. The model learns to predict the next word. Through this, it learns grammar, facts, writing styles, and reasoning patterns. The data is unformatted, just big blobs of text. We're teaching the model only to predict the next word.
+            </p>
+
+            <p>
+                After pre-training the model is an auto-complete or text regressor. You can give it a partial text, and the model will do its best to finish it for you. But it does not understand conversations.
+            </p>
+
+            <p><strong>When to use:</strong> Starting from scratch, building a foundation model.</p>
+
+            <p><strong>Data format:</strong> Plain text. The model learns by predicting the next word.</p>
+
+            <h2>Supervised Fine-Tuning (SFT)</h2>
+
+            <p><strong>What it is:</strong> Teaching the model to have conversations.</p>
+
+            <p>
+                A pre-trained model knows language but doesn't know how to chat. SFT shows it examples of good conversations. It uses special tokens like &lt;|user|&gt; and &lt;|assistant|&gt; to delimit parts of text. If shown enough of these, the model will figure out that &lt;|user|&gt; text is provided, and how the &lt;|assistant|&gt; should sound when responding.
+            </p>
+
+            <p><strong>When to use:</strong> After pre-training, to create a chatbot.</p>
+
+            <p><strong>Data format:</strong> Conversations in ChatML format:</p>
+
+            <pre><code>&lt;|user|&gt;What is the capital of France?&lt;|end|&gt;
+&lt;|assistant|&gt;The capital of France is Paris.&lt;|end|&gt;
+
+&lt;|user|&gt;Tell me a joke&lt;|end|&gt;
+&lt;|assistant|&gt;Why don't scientists trust atoms? Because they make up everything!&lt;|end|&gt;</code></pre>
+
+            <p>The model learns that after <code>&lt;|user|&gt;question&lt;|end|&gt;&lt;|assistant|&gt;</code>, it should generate a helpful answer.</p>
+
+            <h2>Other Fine-Tuning Tasks</h2>
+
+            <p>Fine-tuning isn't just for chatbots. You can use fine tuning to teach the AI anything. What special tokens are, and how they are interpreted is up to you:</p>
+
+            <p><strong>Summarization:</strong></p>
+            <pre><code>&lt;|original|&gt;Summarize this article: [long article text]&lt;|end|&gt;
+&lt;|summary|&gt;The article discusses three main points...&lt;|end|&gt;</code></pre>
+
+            <p><strong>Translation:</strong></p>
+            <pre><code>&lt;|english|&gt;Translate to French: Hello, how are you?&lt;|end|&gt;
+&lt;|french|&gt;Bonjour, comment allez-vous?&lt;|end|&gt;</code></pre>
+
+            <p><strong>Code Generation:</strong></p>
+            <pre><code>&lt;|user|&gt;Write a Python function to calculate factorial&lt;|end|&gt;
+&lt;|coder|&gt;def factorial(n):
+    if n &lt;= 1:
+        return 1
+    return n * factorial(n - 1)&lt;|end|&gt;</code></pre>
+
+            <p><strong>Reasoning with Thinking:</strong></p>
+
+            <p>
+                When you see a "thinking" model, it just generates a special &lt;|think|&gt; tag with extra text that is trained to be factual and step by step. Because the AI always predicts the next word, if it generates a think tag, the assistant tag will be influenced by the words of the think tag.
+            </p>
+
+            <pre><code>&lt;|user|&gt;If a train travels 60 mph for 2.5 hours, how far does it go?&lt;|end|&gt;
+&lt;|think|&gt;Distance = speed &times; time. Speed is 60 mph, time is 2.5 hours. 60 &times; 2.5 = 150 miles.&lt;|end|&gt;
+&lt;|assistant|&gt;The train travels 150 miles.&lt;|end|&gt;</code></pre>
+
+        </article>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div>&copy; 2025 <a href="https://gabormakesgames.com/">Gabor Szauer</a></div>
+        </div>
+    </footer>
+</body>
+</html>

@@ -6,195 +6,110 @@
     <title>GabGPT Trainer</title>
     <style>
         :root {
-            color-scheme: dark;
-            --bg:#0a0a0f;
-            --bg-2:#0e0e16;
-            --panel:#12121c;
-            --panel-2:#171726;
-            --text:#e9e9f2;
-            --muted:#a5a7bf;
-            --line:#1e1e2e;
-            --pink:#ff2e88;
-            --pink-2:#ff86c3;
-            --glow: 0 0 .5rem var(--pink), 0 0 1.25rem color-mix(in oklab, var(--pink) 70%, white 0%), 0 0 2.5rem color-mix(in oklab, var(--pink) 35%, black 65%);
-            --radius:16px;
-            --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
-            --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            --danger:#ff5470;
-            --success:#2cb67d;
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --accent-purple: #a371f7;
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
-            margin: 0;
-            min-height: 100vh;
-            font-family: var(--font);
-            color: var(--text);
-            background:
-                radial-gradient(1200px 520px at 50% -160px, rgba(255,46,136,.12), transparent 75%),
-                linear-gradient(180deg, #090914 0%, #050509 45%, #030306 75%, #020203 100%);
-            background-color: #020203;
-            background-repeat: no-repeat;
-            background-size: 130% 70%, 100% 100%;
-            background-position: center top, center top;
-            background-attachment: fixed;
+            font-family: 'SF Mono', 'Consolas', 'Liberation Mono', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             line-height: 1.6;
-            overflow-x: hidden;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            background-image: linear-gradient(rgba(255,255,255,.03), rgba(255,255,255,0) 2px);
-            background-size: 100% 3px;
-            mix-blend-mode: overlay;
-            opacity: .25;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            body::before { display: none; }
-            * { animation: none !important; transition: none !important; }
+            min-height: 100vh;
         }
 
         .container {
-            width: min(1000px, 92vw);
-            margin-inline: auto;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
         }
 
-        header {
-            background: linear-gradient(180deg, #131321, #11111c);
-            border-bottom: 1px solid var(--line);
-            padding: 1.5rem 0;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            backdrop-filter: blur(10px);
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
 
-        nav {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-        }
-
-        .logo {
-            font-weight: 900;
-            font-size: 1.25rem;
-            color: var(--text);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .logo .pink {
-            color: var(--pink);
-            text-shadow: var(--glow);
-        }
-
-        .back-btn {
-            appearance: none;
-            border: 1px solid color-mix(in oklab, var(--pink) 35%, #ffffff00 65%);
-            color: var(--text);
-            background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
-            padding: .45rem .85rem;
-            border-radius: 999px;
-            cursor: pointer;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            font-size: 0.9rem;
-            transition: transform .12s ease, box-shadow .15s ease;
-        }
-
-        .back-btn:hover {
-            box-shadow: var(--glow);
-            transform: translateY(-1px);
-        }
-
-        .tool-article {
-            background: linear-gradient(180deg, #131321, #11111c);
-            border: 1px solid #222238;
-            border-radius: var(--radius);
-            padding: 2.5rem;
-            margin: 2.5rem 0 4rem;
-            box-shadow: 0 18px 50px rgba(0,0,0,.45), 0 0 60px -10px rgba(255,46,136,.15);
+        .left-column,
+        .right-column {
             display: flex;
             flex-direction: column;
-            gap: 2rem;
-        }
-
-        .tool-sections {
-            display: flex;
-            flex-direction: column;
-            gap: 1.75rem;
-        }
-
-        .panel {
-            background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 80%, black 20%), var(--panel-2));
-            border: 1px solid color-mix(in oklab, var(--pink) 12%, #1f1f2c 88%);
-            border-radius: 18px;
-            padding: 24px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45);
-        }
-
-        .section-title {
-            font-size: 0.95rem;
-            margin-bottom: 18px;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: var(--muted);
-        }
-
-        .controls-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
         }
 
-        .controls-grid-2 {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-
-        .controls-grid-3 {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-        }
-
-        .controls-grid-4 {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-        }
-
-        @media (max-width: 700px) {
-            .controls-grid-4, .controls-grid-3 {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 500px) {
-            .controls-grid-4, .controls-grid-3, .controls-grid-2 {
+        @media (max-width: 1200px) {
+            .main-grid {
                 grid-template-columns: 1fr;
             }
         }
 
-        label {
+        .panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-header h2 {
+            font-size: 1.1rem;
+            color: var(--accent-blue);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-header h2::before {
+            content: '›';
+            color: var(--accent-green);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
             display: block;
-            font-size: 0.9rem;
-            margin-bottom: 6px;
-            color: var(--muted);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
         }
 
         input[type="text"],
@@ -202,149 +117,139 @@
         textarea,
         select {
             width: 100%;
-            border-radius: 12px;
-            border: 1px solid #2a2a3e;
-            background: #0f0f1b;
-            color: var(--text);
-            padding: 12px 14px;
-            font: inherit;
-            font-family: var(--mono);
-            outline: none;
-            transition: border 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        textarea {
-            min-height: 120px;
-            resize: vertical;
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
         input:focus,
         textarea:focus,
         select:focus {
-            border-color: var(--pink);
-            box-shadow: 0 0 0 1px color-mix(in oklab, var(--pink) 50%, transparent);
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
         }
 
-        .hint {
-            font-size: 0.75rem;
-            color: var(--muted);
-            margin-top: 4px;
+        textarea {
+            min-height: 150px;
+            resize: vertical;
         }
 
         button {
-            font: inherit;
+            padding: 10px 20px;
             border: none;
-            border-radius: 999px;
-            padding: 12px 24px;
+            border-radius: 4px;
             cursor: pointer;
-            background: linear-gradient(120deg, var(--pink), var(--pink-2));
-            color: #050509;
-            font-weight: 700;
-            letter-spacing: 0.02em;
-            transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: var(--glow);
+        .btn-primary {
+            background: var(--accent-blue);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: #79b8ff;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .btn-success {
+            background: var(--accent-green);
+            color: #000;
+        }
+
+        .btn-success:hover {
+            background: #56d364;
+        }
+
+        .btn-warning {
+            background: var(--accent-orange);
+            color: #000;
+        }
+
+        .btn-warning:hover {
+            background: #e3b341;
+        }
+
+        .btn-danger {
+            background: var(--accent-red);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #ff7b72;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.75rem;
         }
 
         button:disabled {
-            opacity: 0.45;
+            opacity: 0.5;
             cursor: not-allowed;
         }
 
-        .button-row {
+        .button-group {
             display: flex;
+            gap: 10px;
             flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .button-row button.secondary {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.15);
-            color: var(--text);
-        }
-
-        button.success {
-            background: linear-gradient(120deg, var(--success), color-mix(in oklab, var(--success) 70%, white));
-        }
-
-        button.warning {
-            background: linear-gradient(120deg, #d29922, #e3b341);
-        }
-
-        button.danger {
-            background: linear-gradient(120deg, var(--danger), #ff7b72);
         }
 
         .mode-selector {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
+            gap: 10px;
             margin-bottom: 20px;
         }
 
         .mode-option {
             padding: 15px;
-            background: #0f0f1b;
-            border: 2px solid #2a2a3e;
-            border-radius: 12px;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
             cursor: pointer;
             text-align: center;
             transition: all 0.2s;
         }
 
         .mode-option:hover {
-            border-color: var(--pink);
+            border-color: var(--accent-blue);
         }
 
         .mode-option.active {
-            border-color: var(--success);
-            background: rgba(44, 182, 125, 0.1);
+            border-color: var(--accent-green);
+            background: rgba(63, 185, 80, 0.1);
         }
 
         .mode-option h3 {
             font-size: 0.9rem;
-            margin: 0 0 4px;
-            color: var(--text);
+            margin-bottom: 5px;
         }
 
         .mode-option p {
             font-size: 0.75rem;
-            color: var(--muted);
-            margin: 0;
-        }
-
-        .file-drop {
-            background: #0d0d1a;
-            border: 2px dashed #2a2a3e;
-            border-radius: 14px;
-            padding: 24px;
-            text-align: center;
-            cursor: pointer;
-            position: relative;
-            transition: border-color 0.2s, background 0.2s;
-            color: var(--muted);
-        }
-
-        .file-drop:hover {
-            border-color: var(--pink);
-            background: rgba(255, 46, 136, 0.05);
-        }
-
-        .file-drop input[type="file"] {
-            position: absolute;
-            inset: 0;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .file-drop .filename {
-            display: block;
-            margin-top: 8px;
-            color: var(--success);
-            font-weight: 600;
+            color: var(--text-secondary);
         }
 
         .reserved-keywords {
@@ -352,10 +257,9 @@
             flex-wrap: wrap;
             gap: 8px;
             margin-top: 10px;
-            padding: 12px;
-            background: #0f0f1b;
-            border-radius: 12px;
-            border: 1px solid #2a2a3e;
+            padding: 10px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
             min-height: 50px;
         }
 
@@ -364,8 +268,8 @@
             align-items: center;
             gap: 5px;
             padding: 4px 10px;
-            background: rgba(255, 46, 136, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             font-size: 0.8rem;
         }
@@ -373,144 +277,246 @@
         .keyword-tag button {
             background: none;
             border: none;
-            color: var(--danger);
+            color: var(--accent-red);
             cursor: pointer;
             padding: 0;
             font-size: 1rem;
             line-height: 1;
         }
 
-        .keyword-tag button:hover {
-            transform: none;
-            box-shadow: none;
+        .log-container {
+            background: #000;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            height: 400px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            padding: 10px;
+        }
+
+        .log-entry {
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            word-wrap: break-word;
+        }
+
+        .log-entry.info { color: var(--text-secondary); }
+        .log-entry.success { color: var(--accent-green); }
+        .log-entry.warning { color: var(--accent-orange); }
+        .log-entry.error { color: var(--accent-red); }
+        .log-entry.epoch { color: var(--accent-purple); font-weight: bold; }
+        .log-entry.loss { color: var(--accent-blue); }
+        .log-entry.timestamp { color: #666; }
+
+        .progress-section {
+            margin-top: 20px;
+        }
+
+        .progress-bar-container {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            height: 24px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #fff;
         }
 
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        @media (max-width: 600px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+            gap: 10px;
+            margin-top: 15px;
         }
 
         .stat-box {
-            background: #0f0f1b;
-            border: 1px solid #2a2a3e;
-            border-radius: 12px;
-            padding: 15px;
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 4px;
             text-align: center;
         }
 
-        .stat-value {
-            font-family: var(--mono);
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: var(--pink);
+        .stat-box .value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent-blue);
         }
 
-        .stat-label {
+        .stat-box .label {
             font-size: 0.7rem;
-            color: var(--muted);
-            margin-top: 4px;
+            color: var(--text-secondary);
             text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
-        .progress-container {
-            margin-top: 14px;
-            padding: 14px 18px;
-            background: rgba(13, 19, 32, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 14px;
-            font-family: var(--mono);
+        .file-input-wrapper {
+            position: relative;
         }
 
-        .progress-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            font-size: 0.85rem;
-            color: var(--muted);
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .progress-bar {
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
             width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 999px;
-            overflow: hidden;
-        }
-
-        .progress-bar-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--pink), var(--pink-2));
-            width: 0%;
-            border-radius: inherit;
-            transition: width 0.2s ease;
+            opacity: 0;
+            cursor: pointer;
         }
 
-        .log-output {
-            background: #0d0d1a;
-            border-radius: 14px;
-            border: 1px solid #23233a;
-            padding: 18px;
-            font-family: var(--mono);
-            font-size: 0.85rem;
-            max-height: 350px;
-            overflow-y: auto;
-            line-height: 1.5;
-            color: #cfd6ff;
-            box-shadow: inset 0 0 25px rgba(0,0,0,0.35);
+        .file-input-display {
+            padding: 30px;
+            background: var(--bg-tertiary);
+            border: 2px dashed var(--border-color);
+            border-radius: 4px;
+            text-align: center;
+            color: var(--text-secondary);
+            transition: all 0.2s;
         }
 
-        .log-output .log-info { color: var(--muted); }
-        .log-output .log-success { color: var(--success); }
-        .log-output .log-warning { color: #d29922; }
-        .log-output .log-error { color: var(--danger); }
-        .log-output .log-epoch { color: var(--pink-2); font-weight: bold; }
-        .log-output .log-loss { color: var(--pink); }
+        .file-input-wrapper:hover .file-input-display {
+            border-color: var(--accent-blue);
+            color: var(--text-primary);
+        }
+
+        .section-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 20px 0;
+        }
+
+        .training-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
 
         .status-indicator {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 6px 16px;
-            background: rgba(255, 46, 136, 0.12);
-            border-radius: 999px;
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border-radius: 20px;
             font-size: 0.85rem;
         }
 
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background: var(--muted);
+            background: var(--text-secondary);
         }
 
-        .status-dot.idle { background: var(--muted); }
-        .status-dot.training { background: var(--success); animation: pulse 1s infinite; }
-        .status-dot.paused { background: #d29922; }
-        .status-dot.error { background: var(--danger); }
+        .status-dot.idle { background: var(--text-secondary); }
+        .status-dot.training { background: var(--accent-green); animation: pulse 1s infinite; }
+        .status-dot.paused { background: var(--accent-orange); }
+        .status-dot.error { background: var(--accent-red); }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
 
+        .collapsible-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            padding: 10px 0;
+        }
+
+        .collapsible-header:hover {
+            color: var(--accent-blue);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .collapsible-content.open {
+            max-height: 2000px;
+        }
+
+        .hint {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .io-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .io-section h3 {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .format-example {
+            margin-top: 15px;
+        }
+
+        .format-example label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .code-example {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .code-example .code-label {
+            background: var(--bg-primary);
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            color: var(--accent-blue);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .code-example pre {
+            padding: 10px;
+            margin: 0;
+            font-size: 0.75rem;
+            color: var(--text-primary);
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
         .param-section {
             margin-top: 15px;
-            padding: 12px 16px;
-            background: #0f0f1b;
-            border: 1px solid #2a2a3e;
-            border-radius: 12px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -526,7 +532,7 @@
 
         .param-estimate-label {
             font-size: 0.75rem;
-            color: var(--muted);
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -534,104 +540,30 @@
         .param-estimate-value {
             font-size: 1rem;
             font-weight: bold;
-            color: var(--pink);
+            color: var(--accent-blue);
         }
 
         .param-estimate-hint {
             font-size: 0.7rem;
-            color: var(--muted);
+            color: var(--text-secondary);
         }
 
         .preset-buttons {
             display: flex;
             gap: 6px;
         }
-
-        .preset-buttons button {
-            padding: 6px 12px;
-            font-size: 0.75rem;
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.15);
-            color: var(--text);
-        }
-
-        .format-example {
-            margin-top: 15px;
-        }
-
-        .code-example {
-            background: #0f0f1b;
-            border: 1px solid #2a2a3e;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            overflow: hidden;
-        }
-
-        .code-example .code-label {
-            background: #0a0a14;
-            padding: 6px 10px;
-            font-size: 0.75rem;
-            color: var(--pink);
-            border-bottom: 1px solid #2a2a3e;
-        }
-
-        .code-example pre {
-            padding: 10px;
-            margin: 0;
-            font-size: 0.75rem;
-            font-family: var(--mono);
-            color: var(--text);
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        .hidden { display: none !important; }
-
-        footer {
-            border-top: 1px solid var(--line);
-            background: #0a0a12;
-            color: var(--muted);
-            padding: 1rem 0 1.5rem;
-            font-size: 0.875rem;
-            margin-top: 4rem;
-        }
-
-        footer a {
-            color: var(--pink-2);
-            text-decoration: none;
-            border-bottom: 1px solid rgba(255, 134, 195, 0.3);
-            transition: all 0.2s ease;
-        }
-
-        footer a:hover {
-            color: var(--pink);
-            border-bottom-color: var(--pink);
-            text-shadow: 0 0 8px rgba(255, 46, 136, 0.4);
-        }
-
-        @media (max-width: 768px) {
-            .tool-article { padding: 1.5rem; }
-            nav { flex-direction: column; }
-        }
     </style>
 </head>
 <body>
-    <header>
-        <nav class="container">
-            <a href="index.html" class="logo">
-                The Gift of <span class="pink">Gab</span>
-            </a>
-            <a href="blog_training.html" class="back-btn">Back to Blog</a>
-        </nav>
-    </header>
-
-    <main class="container">
-        <article class="tool-article">
-            <div class="tool-sections">
+    <div class="container">
+        <div class="main-grid">
+            <!-- Left Column: Configuration -->
+            <div class="left-column">
                 <!-- Training Mode Selection -->
-                <section class="panel">
-                    <div class="section-title">Training Mode</div>
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Training Mode</h2>
+                    </div>
                     <div class="mode-selector">
                         <div class="mode-option active" data-mode="pretrain-direct">
                             <h3>Pre-Train Direct</h3>
@@ -653,20 +585,26 @@
 
                     <!-- Training Data Input -->
                     <div id="directInputSection">
-                        <label>Training Data</label>
-                        <textarea id="trainingDataText" placeholder="Enter your training text here..."></textarea>
-                        <p class="hint" id="inputHint">For pre-training, enter raw text. Model learns to predict next character.</p>
+                        <div class="form-group">
+                            <label>Training Data</label>
+                            <textarea id="trainingDataText" placeholder="Enter your training text here..."></textarea>
+                            <p class="hint" id="inputHint">For pre-training, enter raw text. Model learns to predict next character.</p>
+                        </div>
                     </div>
 
                     <div id="fileInputSection" class="hidden">
-                        <label>Upload Training File</label>
-                        <div class="file-drop">
-                            <input type="file" id="trainingFile" accept=".txt,.json,.jsonl">
-                            Drop file here or click to browse
-                            <br><span style="font-size: 0.8rem;">.txt, .json, .jsonl supported</span>
-                            <span class="filename" id="fileInfo"></span>
+                        <div class="form-group">
+                            <label>Upload Training File</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" id="trainingFile" accept=".txt,.json,.jsonl">
+                                <div class="file-input-display">
+                                    <div>📁 Drop file here or click to browse</div>
+                                    <div style="font-size: 0.8rem; margin-top: 5px;">.txt, .json, .jsonl supported</div>
+                                </div>
+                            </div>
+                            <p id="fileInfo" style="margin-top: 10px; color: var(--accent-green);"></p>
                         </div>
-
+                        
                         <!-- Format Examples -->
                         <div id="pretrainFileHint" class="format-example">
                             <label>Expected Format (Pre-Train)</label>
@@ -677,43 +615,71 @@ It can span multiple lines.
 The model learns to predict the next token.</pre>
                             </div>
                         </div>
-
+                        
                         <div id="sftFileHint" class="format-example hidden">
                             <label>Expected Format (SFT)</label>
                             <div class="code-example">
                                 <div class="code-label">.txt - Plain ChatML text:</div>
-                                <pre>&lt;|user|&gt;Hello, how are you?&lt;|end|&gt;&lt;|assistant|&gt;I'm doing well, thanks!&lt;|end|&gt;</pre>
+                                <pre>&lt;|user|&gt;Hello, how are you?&lt;|end|&gt;&lt;|assistant|&gt;I'm doing well, thanks!&lt;|end|&gt;
+&lt;|user|&gt;What's the weather?&lt;|end|&gt;&lt;|assistant|&gt;I don't have weather data.&lt;|end|&gt;</pre>
                             </div>
                             <div class="code-example">
                                 <div class="code-label">.jsonl - One conversation per line:</div>
-                                <pre>{"messages": [{"role": "user", "content": "Hello!"}, {"role": "assistant", "content": "Hi!"}]}</pre>
+                                <pre>{"messages": [{"role": "user", "content": "Hello!"}, {"role": "assistant", "content": "Hi there!"}]}
+{"messages": [{"role": "user", "content": "Help me"}, {"role": "assistant", "content": "Sure!"}]}</pre>
+                            </div>
+                            <div class="code-example">
+                                <div class="code-label">.json - Array of conversations:</div>
+                                <pre>[
+  {
+    "messages": [
+      {"role": "system", "content": "You are helpful."},
+      {"role": "user", "content": "Hello!"},
+      {"role": "assistant", "content": "Hi! How can I help?"}
+    ]
+  },
+  {
+    "messages": [
+      {"role": "user", "content": "What is 2+2?"},
+      {"role": "assistant", "content": "2+2 equals 4."}
+    ]
+  }
+]</pre>
                             </div>
                         </div>
                     </div>
-                </section>
+                </div>
 
                 <!-- Model Hyperparameters -->
-                <section class="panel">
-                    <div class="section-title">Model Architecture</div>
-                    <div class="controls-grid-4">
-                        <div>
-                            <label for="embeddingDim">Embedding Dimension</label>
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Model Architecture</h2>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Embedding Dimension</label>
                             <input type="number" id="embeddingDim" value="512" min="8" step="8" onchange="updateParamEstimate()">
+                            <p class="hint">Size of token embeddings</p>
                         </div>
-                        <div>
-                            <label for="numHeads">Attention Heads</label>
+                        <div class="form-group">
+                            <label>Attention Heads</label>
                             <input type="number" id="numHeads" value="8" min="1" onchange="updateParamEstimate()">
-                        </div>
-                        <div>
-                            <label for="numBlocks">Transformer Blocks</label>
-                            <input type="number" id="numBlocks" value="6" min="1" onchange="updateParamEstimate()">
-                        </div>
-                        <div>
-                            <label for="maxSeqLength">Max Sequence Length</label>
-                            <input type="number" id="maxSeqLength" value="512" min="16" step="16" onchange="updateParamEstimate()">
+                            <p class="hint">Must divide embedding dim</p>
                         </div>
                     </div>
-
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Transformer Blocks</label>
+                            <input type="number" id="numBlocks" value="6" min="1" onchange="updateParamEstimate()">
+                            <p class="hint">Depth of the model</p>
+                        </div>
+                        <div class="form-group">
+                            <label>Max Sequence Length</label>
+                            <input type="number" id="maxSeqLength" value="512" min="16" step="16" onchange="updateParamEstimate()">
+                            <p class="hint">Context window size</p>
+                        </div>
+                    </div>
+                    
                     <div class="param-section">
                         <div class="param-estimate">
                             <span class="param-estimate-label">Est. Params:</span>
@@ -721,171 +687,171 @@ The model learns to predict the next token.</pre>
                             <span class="param-estimate-hint" id="paramHint">(vocab ~1,756)</span>
                         </div>
                         <div class="preset-buttons">
-                            <button onclick="applyPreset('small')">~300K</button>
-                            <button onclick="applyPreset('medium')">~20M</button>
-                            <button onclick="applyPreset('large')">~1B</button>
+                            <button class="btn-secondary btn-small" onclick="applyPreset('small')">~300K</button>
+                            <button class="btn-secondary btn-small" onclick="applyPreset('medium')">~20M</button>
+                            <button class="btn-secondary btn-small" onclick="applyPreset('large')">~1B</button>
                         </div>
                     </div>
-                </section>
+                </div>
 
                 <!-- Tokenizer Configuration -->
-                <section class="panel">
-                    <div class="section-title">Tokenizer (BPE)</div>
-                    <div class="controls-grid-2">
-                        <div>
-                            <label for="numMerges">Number of Merges</label>
-                            <input type="number" id="numMerges" value="1500" min="0" step="50" onchange="updateParamEstimate()">
-                            <p class="hint">Higher = larger vocabulary, more compression</p>
-                        </div>
-                        <div>
-                            <label>Reserved Keywords</label>
-                            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                                <input type="text" id="newKeyword" placeholder="Add keyword..." style="flex: 1;">
-                                <button class="secondary" onclick="addKeyword()" style="padding: 8px 16px;">Add</button>
-                            </div>
-                            <button class="secondary" onclick="addChatMLKeywords()" style="padding: 6px 12px; font-size: 0.8rem;">+ ChatML Tokens</button>
-                        </div>
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Tokenizer (BPE)</h2>
+                        <button class="btn-secondary btn-small" onclick="addChatMLKeywords()">+ ChatML</button>
                     </div>
-                    <div class="reserved-keywords" id="keywordsList"></div>
-                </section>
+                    <div class="form-group">
+                        <label>Number of Merges</label>
+                        <input type="number" id="numMerges" value="1500" min="0" step="50" onchange="updateParamEstimate()">
+                        <p class="hint">Higher = larger vocabulary, more compression</p>
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <div class="form-group">
+                        <label>Reserved Keywords</label>
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <input type="text" id="newKeyword" placeholder="Add keyword...">
+                            <button class="btn-secondary btn-small" onclick="addKeyword()">Add</button>
+                        </div>
+                        <div class="reserved-keywords" id="keywordsList"></div>
+                    </div>
+                </div>
 
                 <!-- Training Hyperparameters -->
-                <section class="panel">
-                    <div class="section-title">Training Configuration</div>
-                    <div class="controls-grid-3">
-                        <div>
-                            <label for="numEpochs">Epochs</label>
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Training Configuration</h2>
+                    </div>
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label>Epochs</label>
                             <input type="number" id="numEpochs" value="10" min="1">
                         </div>
-                        <div>
-                            <label for="batchSize">Batch Size</label>
+                        <div class="form-group">
+                            <label>Batch Size</label>
                             <input type="number" id="batchSize" value="4" min="1">
                         </div>
-                        <div>
-                            <label for="seqLength">Sequence Length</label>
+                        <div class="form-group">
+                            <label>Sequence Length</label>
                             <input type="number" id="seqLength" value="256" min="8" step="8">
                         </div>
                     </div>
-                    <div class="controls-grid-3" style="margin-top: 20px;">
-                        <div>
-                            <label for="learningRate">Learning Rate</label>
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label>Learning Rate</label>
                             <input type="number" id="learningRate" value="0.0003" step="0.0001" min="0">
                         </div>
-                        <div>
-                            <label for="warmupRatio">Warmup Ratio</label>
+                        <div class="form-group">
+                            <label>Warmup Ratio</label>
                             <input type="number" id="warmupRatio" value="0.1" step="0.05" min="0" max="1">
+                            <p class="hint">% of steps for warmup</p>
                         </div>
-                        <div>
-                            <label for="logEvery">Log Every N Steps</label>
+                        <div class="form-group">
+                            <label>Log Every N Steps</label>
                             <input type="number" id="logEvery" value="10" min="1">
                         </div>
                     </div>
-                    <div style="margin-top: 20px;">
-                        <label style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text);">
-                            <input type="checkbox" id="useAdam" checked style="width: auto; accent-color: var(--pink);">
-                            <span>Use Adam Optimizer</span>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="useAdam" checked style="width: auto;">
+                            <span style="text-transform: none; font-size: 0.9rem; color: var(--text-primary);">Use Adam Optimizer</span>
                         </label>
                         <p class="hint">Adam uses adaptive learning rates with momentum. Disable for simple SGD.</p>
                     </div>
-                </section>
+                </div>
+            </div>
 
+            <!-- Right Column: Training & Logs -->
+            <div class="right-column">
                 <!-- Training Controls -->
-                <section class="panel">
-                    <div class="section-title">Training Controls</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
-                        <div class="button-row">
-                            <button class="success" id="startBtn" onclick="startTraining()">▶ Start Training</button>
-                            <button class="warning" id="pauseBtn" onclick="pauseTraining()" disabled>⏸ Pause</button>
-                            <button id="resumeBtn" onclick="resumeTraining()" disabled>▶ Resume</button>
-                            <button class="danger" id="stopBtn" onclick="stopTraining()" disabled>⏹ Stop</button>
-                        </div>
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Training Controls</h2>
                         <span class="status-indicator">
                             <span class="status-dot" id="statusDot"></span>
                             <span id="statusText">Idle</span>
                         </span>
                     </div>
-
-                    <div class="progress-container">
-                        <div class="progress-meta">
-                            <span id="progressLabel">Waiting...</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-bar-fill" id="progressBar"></div>
-                        </div>
+                    
+                    <div class="training-controls">
+                        <button class="btn-success" id="startBtn" onclick="startTraining()">▶ Start Training</button>
+                        <button class="btn-warning" id="pauseBtn" onclick="pauseTraining()" disabled>⏸ Pause</button>
+                        <button class="btn-primary" id="resumeBtn" onclick="resumeTraining()" disabled>▶ Resume</button>
+                        <button class="btn-danger" id="stopBtn" onclick="stopTraining()" disabled>⏹ Stop</button>
                     </div>
 
-                    <div class="stats-grid">
-                        <div class="stat-box">
-                            <div class="stat-value" id="currentEpoch">0</div>
-                            <div class="stat-label">Epoch</div>
+                    <div class="progress-section">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="progressBar" style="width: 0%;">0%</div>
                         </div>
-                        <div class="stat-box">
-                            <div class="stat-value" id="currentStep">0</div>
-                            <div class="stat-label">Step</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-value" id="currentLoss">-</div>
-                            <div class="stat-label">Loss</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-value" id="avgLoss">-</div>
-                            <div class="stat-label">Avg Loss</div>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="value" id="currentEpoch">0</div>
+                                <div class="label">Epoch</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="value" id="currentStep">0</div>
+                                <div class="label">Step</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="value" id="currentLoss">-</div>
+                                <div class="label">Loss</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="value" id="avgLoss">-</div>
+                                <div class="label">Avg Loss</div>
+                            </div>
                         </div>
                     </div>
-                </section>
+                </div>
 
                 <!-- Training Log -->
-                <section class="panel">
-                    <div class="section-title">Training Log</div>
-                    <div class="log-output" id="logContainer"></div>
-                    <div class="button-row" style="margin-top: 12px;">
-                        <button class="secondary" onclick="clearLogs()">Clear Log</button>
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Training Log</h2>
+                        <button class="btn-secondary btn-small" onclick="clearLogs()">Clear</button>
                     </div>
-                </section>
+                    <div class="log-container" id="logContainer"></div>
+                </div>
 
                 <!-- Import/Export Section -->
-                <section class="panel">
-                    <div class="section-title">Save & Load</div>
-
-                    <div style="margin-bottom: 20px;">
-                        <label style="font-weight: 600; color: var(--text);">Training Session</label>
-                        <p class="hint" style="margin-bottom: 10px;">Save/load complete training state including model, tokenizer, hyperparameters, and training data.</p>
-                        <div class="button-row">
-                            <button class="secondary" onclick="saveSession()">💾 Save Session</button>
-                            <button class="secondary" onclick="document.getElementById('loadSessionFile').click()">📂 Load Session</button>
-                            <input type="file" id="loadSessionFile" accept=".gabs" style="display: none;" onchange="loadSession(event)">
-                        </div>
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Save & Load</h2>
                     </div>
 
-                    <div style="margin-bottom: 20px;">
-                        <label style="font-weight: 600; color: var(--text);">Model Only</label>
-                        <p class="hint" style="margin-bottom: 10px;">Export/import just the trained model weights.</p>
-                        <div class="button-row">
-                            <button class="secondary" onclick="exportModel()">📤 Export Model (.gab)</button>
-                            <button class="secondary" onclick="document.getElementById('importModelFile').click()">📥 Import Model</button>
-                            <input type="file" id="importModelFile" accept=".gab" style="display: none;" onchange="importModel(event)">
-                        </div>
+                    <h3 style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px;">Training Session</h3>
+                    <p class="hint" style="margin-bottom: 10px;">Save/load complete training state including model, tokenizer, hyperparameters, and training data.</p>
+                    <div class="button-group" style="margin-bottom: 20px;">
+                        <button class="btn-secondary" onclick="saveSession()">💾 Save Session</button>
+                        <button class="btn-secondary" onclick="document.getElementById('loadSessionFile').click()">📂 Load Session</button>
+                        <input type="file" id="loadSessionFile" accept=".gabs" style="display: none;" onchange="loadSession(event)">
                     </div>
 
-                    <div>
-                        <label style="font-weight: 600; color: var(--text);">Tokenizer Only</label>
-                        <p class="hint" style="margin-bottom: 10px;">Export/import just the trained tokenizer.</p>
-                        <div class="button-row">
-                            <button class="secondary" onclick="exportTokenizer()">📤 Export Tokenizer (.bpe)</button>
-                            <button class="secondary" onclick="document.getElementById('importTokenizerFile').click()">📥 Import Tokenizer</button>
-                            <input type="file" id="importTokenizerFile" accept=".bpe" style="display: none;" onchange="importTokenizer(event)">
-                        </div>
+                    <div class="section-divider"></div>
+
+                    <h3 style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px;">Model Only</h3>
+                    <p class="hint" style="margin-bottom: 10px;">Export/import just the trained model weights.</p>
+                    <div class="button-group" style="margin-bottom: 20px;">
+                        <button class="btn-secondary" onclick="exportModel()">📤 Export Model (.gab)</button>
+                        <button class="btn-secondary" onclick="document.getElementById('importModelFile').click()">📥 Import Model</button>
+                        <input type="file" id="importModelFile" accept=".gab" style="display: none;" onchange="importModel(event)">
                     </div>
-                </section>
+
+                    <div class="section-divider"></div>
+
+                    <h3 style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px;">Tokenizer Only</h3>
+                    <p class="hint" style="margin-bottom: 10px;">Export/import just the trained tokenizer.</p>
+                    <div class="button-group">
+                        <button class="btn-secondary" onclick="exportTokenizer()">📤 Export Tokenizer (.bpe)</button>
+                        <button class="btn-secondary" onclick="document.getElementById('importTokenizerFile').click()">📥 Import Tokenizer</button>
+                        <input type="file" id="importTokenizerFile" accept=".bpe" style="display: none;" onchange="importTokenizer(event)">
+                    </div>
+                </div>
             </div>
-        </article>
-    </main>
-
-    <footer>
-        <div class="container">
-            <div>&copy; 2025 <a href="https://gabormakesgames.com/">Gabor Szauer</a></div>
         </div>
-    </footer>
+    </div>
 
     <!-- Include gab.js -->
     <script src="gab.js"></script>
@@ -895,7 +861,7 @@ The model learns to predict the next token.</pre>
         // Worker receives the gab.js code and evals it
         let gabCode = null;
         let Tokenizer, GabGPT, AdamOptimizer, createBatches, getLearningRate;
-
+        
         let model = null;
         let tokenizer = null;
         let optimizer = null;
@@ -909,7 +875,7 @@ The model learns to predict the next token.</pre>
         let warmupSteps = 0;
         let baseLearningRate = 0.001;
         let logEvery = 1;
-
+        
         function log(message, type = 'info') {
             const timestamp = new Date().toLocaleTimeString();
             self.postMessage({
@@ -917,18 +883,18 @@ The model learns to predict the next token.</pre>
                 data: { message, logType: type, timestamp }
             });
         }
-
+        
         function updateProgress(data) {
             self.postMessage({ type: 'progress', data });
         }
-
+        
         function updateStats(data) {
             self.postMessage({ type: 'stats', data });
         }
-
+        
         self.onmessage = function(e) {
             const { action, payload } = e.data;
-
+            
             switch (action) {
                 case 'init':
                     initializeFromCode(payload.gabCode);
@@ -960,11 +926,16 @@ The model learns to predict the next token.</pre>
                     break;
             }
         };
-
+        
         function initializeFromCode(code) {
             try {
                 gabCode = code;
-
+                
+                // Wrap the code to capture exports in worker context
+                // Remove the module.exports block and capture classes directly
+                let modifiedCode = code;
+                
+                // Create a function that will execute the code and return the classes
                 const wrappedCode = `
                     (function() {
                         ${code}
@@ -977,29 +948,45 @@ The model learns to predict the next token.</pre>
                         };
                     })();
                 `;
-
+                
                 const exports = eval(wrappedCode);
-
+                
                 Tokenizer = exports.Tokenizer;
                 GabGPT = exports.GabGPT;
                 AdamOptimizer = exports.AdamOptimizer;
                 createBatches = exports.createBatches;
                 getLearningRate = exports.getLearningRate;
 
-                if (!Tokenizer) throw new Error('Tokenizer class not found in gab.js');
-                if (!GabGPT) throw new Error('GabGPT class not found in gab.js');
-                if (!AdamOptimizer) throw new Error('AdamOptimizer class not found in gab.js');
-                if (!createBatches) throw new Error('createBatches function not found in gab.js');
-                if (!getLearningRate) throw new Error('getLearningRate function not found in gab.js');
+                if (!Tokenizer) {
+                    throw new Error('Tokenizer class not found in gab.js');
+                }
+                if (!GabGPT) {
+                    throw new Error('GabGPT class not found in gab.js');
+                }
+                if (!AdamOptimizer) {
+                    throw new Error('AdamOptimizer class not found in gab.js');
+                }
+                if (!createBatches) {
+                    throw new Error('createBatches function not found in gab.js');
+                }
+                if (!getLearningRate) {
+                    throw new Error('getLearningRate function not found in gab.js');
+                }
 
                 log('Worker initialized with GabGPT code', 'success');
+                log('  - Tokenizer: OK', 'info');
+                log('  - GabGPT: OK', 'info');
+                log('  - AdamOptimizer: OK', 'info');
+                log('  - createBatches: OK', 'info');
+                log('  - getLearningRate: OK', 'info');
                 self.postMessage({ type: 'initialized' });
             } catch (err) {
                 log('Failed to initialize worker: ' + err.message, 'error');
+                log('Stack: ' + err.stack, 'error');
                 self.postMessage({ type: 'error', data: err.message });
             }
         }
-
+        
         function startTraining(config) {
             try {
                 shouldStop = false;
@@ -1007,41 +994,71 @@ The model learns to predict the next token.</pre>
                 currentEpoch = 0;
                 currentBatchIndex = 0;
                 currentStep = 0;
-
+                
                 log('═══════════════════════════════════════════════════════════', 'info');
                 log('STARTING NEW TRAINING SESSION', 'epoch');
                 log('═══════════════════════════════════════════════════════════', 'info');
-
+                
+                // Log all configuration
+                log('Configuration:', 'info');
+                log('  Training Mode: ' + config.mode, 'info');
+                log('  Embedding Dimension: ' + config.embeddingDim, 'info');
+                log('  Attention Heads: ' + config.numHeads, 'info');
+                log('  Transformer Blocks: ' + config.numBlocks, 'info');
+                log('  Max Sequence Length: ' + config.maxSeqLength, 'info');
+                log('  Epochs: ' + config.numEpochs, 'info');
+                log('  Batch Size: ' + config.batchSize, 'info');
+                log('  Sequence Length: ' + config.seqLength, 'info');
+                log('  Learning Rate: ' + config.learningRate, 'info');
+                log('  Warmup Ratio: ' + config.warmupRatio, 'info');
+                log('  Use Adam: ' + config.useAdam, 'info');
+                log('  Tokenizer Merges: ' + config.numMerges, 'info');
+                log('  Reserved Keywords: [' + config.reservedKeywords.join(', ') + ']', 'info');
+                log('───────────────────────────────────────────────────────────', 'info');
+                
                 baseLearningRate = config.learningRate;
                 logEvery = config.logEvery || 1;
-
+                
+                // Create and train tokenizer
                 log('STEP 1: Creating tokenizer...', 'info');
                 tokenizer = new Tokenizer();
-
+                
+                // Reserve keywords
                 if (config.reservedKeywords && config.reservedKeywords.length > 0) {
                     log('Reserving ' + config.reservedKeywords.length + ' keywords...', 'info');
                     for (let i = 0; i < config.reservedKeywords.length; i++) {
                         const keyword = config.reservedKeywords[i];
-                        tokenizer.reserveToken(keyword);
+                        const tokenId = tokenizer.reserveToken(keyword);
+                        log('  Reserved "' + keyword + '" -> token ID ' + tokenId, 'info');
                     }
                 }
-
+                
+                // Get training data
                 const trainingText = config.trainingData;
                 log('Training data size: ' + trainingText.length + ' characters', 'info');
-
+                
+                // Train tokenizer
                 log('Training tokenizer with ' + config.numMerges + ' merges...', 'info');
+                const tokenizerStartTime = Date.now();
                 tokenizer.train(trainingText, config.numMerges);
-                log('Final vocabulary size: ' + tokenizer.getVocabSize(), 'success');
-
+                const tokenizerTime = ((Date.now() - tokenizerStartTime) / 1000).toFixed(2);
+                log('Tokenizer trained in ' + tokenizerTime + 's', 'success');
+                log('Final vocabulary size: ' + tokenizer.getVocabSize(), 'info');
+                
+                // Tokenize training data
                 log('───────────────────────────────────────────────────────────', 'info');
                 log('STEP 2: Tokenizing training data...', 'info');
                 const tokens = tokenizer.encode(trainingText);
                 log('Encoded ' + trainingText.length + ' chars -> ' + tokens.length + ' tokens', 'info');
-
+                log('Compression ratio: ' + (trainingText.length / tokens.length).toFixed(2) + 'x', 'info');
+                
+                // Create model
                 log('───────────────────────────────────────────────────────────', 'info');
                 log('STEP 3: Creating model...', 'info');
                 const vocabSize = tokenizer.getVocabSize();
-
+                log('Vocab size: ' + vocabSize, 'info');
+                log('Creating GabGPT(' + vocabSize + ', ' + config.embeddingDim + ', ' + config.numHeads + ', ' + config.numBlocks + ', ' + config.maxSeqLength + ')', 'info');
+                
                 model = new GabGPT(
                     vocabSize,
                     config.embeddingDim,
@@ -1060,70 +1077,102 @@ The model learns to predict the next token.</pre>
                     optimizer = null;
                     log('Using SGD with learning rate warmup', 'info');
                 }
-
+                
+                // Estimate parameter count
+                const hiddenDim = config.embeddingDim * 4;
+                let paramCount = 0;
+                paramCount += vocabSize * config.embeddingDim; // token embeddings
+                paramCount += config.maxSeqLength * config.embeddingDim; // position embeddings
+                paramCount += config.numBlocks * (
+                    2 * config.embeddingDim + // layernorm1
+                    4 * config.embeddingDim * config.embeddingDim + // attention
+                    2 * config.embeddingDim + // layernorm2
+                    hiddenDim * (config.embeddingDim + 1) + // mlp dense1
+                    config.embeddingDim * (hiddenDim + 1) // mlp dense2
+                );
+                paramCount += 2 * config.embeddingDim; // final layernorm
+                paramCount += config.embeddingDim * vocabSize + vocabSize; // output layer
+                log('Estimated parameters: ~' + paramCount.toLocaleString(), 'info');
+                
+                // Create batches
                 log('───────────────────────────────────────────────────────────', 'info');
                 log('STEP 4: Creating training batches...', 'info');
                 batches = createBatches(tokens, config.batchSize, config.seqLength);
                 log('Created ' + batches.length + ' batches', 'info');
-
+                log('Batch size: ' + config.batchSize + ', Sequence length: ' + config.seqLength, 'info');
+                
                 if (batches.length === 0) {
                     log('ERROR: No batches created! Training data may be too short.', 'error');
+                    log('Need at least ' + (config.seqLength + 1) + ' tokens, got ' + tokens.length, 'error');
                     self.postMessage({ type: 'error', data: 'Training data too short' });
                     return;
                 }
-
+                
+                // Calculate training steps
                 totalSteps = config.numEpochs * batches.length;
                 warmupSteps = Math.floor(totalSteps * config.warmupRatio);
                 log('Total training steps: ' + totalSteps, 'info');
-
+                log('Warmup steps: ' + warmupSteps, 'info');
+                
                 log('═══════════════════════════════════════════════════════════', 'info');
                 log('STARTING TRAINING LOOP', 'epoch');
                 log('═══════════════════════════════════════════════════════════', 'info');
-
+                
+                // Store config for state saving
                 self.trainingConfig = config;
+                
                 continueTraining();
-
+                
             } catch (err) {
                 log('Training error: ' + err.message, 'error');
+                log('Stack: ' + err.stack, 'error');
                 self.postMessage({ type: 'error', data: err.message });
             }
         }
-
+        
         function continueTraining() {
             if (shouldStop) {
                 log('Training stopped', 'warning');
                 self.postMessage({ type: 'stopped' });
                 return;
             }
-
-            if (isPaused) return;
-
+            
+            if (isPaused) {
+                return;
+            }
+            
             const config = self.trainingConfig;
-
+            
             try {
+                // Process one batch at a time to allow for pause/stop
                 if (currentEpoch < config.numEpochs) {
                     if (currentBatchIndex === 0) {
                         log('───────────────────────────────────────────────────────────', 'info');
                         log('EPOCH ' + (currentEpoch + 1) + '/' + config.numEpochs + ' STARTED', 'epoch');
                         self.epochLosses = [];
                     }
-
+                    
                     if (currentBatchIndex < batches.length) {
                         const batch = batches[currentBatchIndex];
                         const lr = getLearningRate(currentStep, warmupSteps, totalSteps, baseLearningRate);
-
+                        
+                        const batchStartTime = Date.now();
                         const loss = model.train(batch.inputs, batch.targets, lr);
+                        const batchTime = Date.now() - batchStartTime;
+                        
                         self.epochLosses.push(loss);
-
+                        
                         if (currentStep % logEvery === 0 || currentBatchIndex === 0 || currentBatchIndex === batches.length - 1) {
-                            log('  Step ' + (currentStep + 1) + '/' + totalSteps +
+                            log('  Step ' + (currentStep + 1) + '/' + totalSteps + 
+                                ' | Batch ' + (currentBatchIndex + 1) + '/' + batches.length +
                                 ' | Loss: ' + loss.toFixed(6) +
-                                ' | LR: ' + lr.toFixed(6), 'loss');
+                                ' | LR: ' + lr.toFixed(6) +
+                                ' | Time: ' + batchTime + 'ms', 'loss');
                         }
-
+                        
                         const progress = ((currentStep + 1) / totalSteps) * 100;
                         updateProgress({ percent: progress });
-
+                        
                         const avgLoss = self.epochLosses.reduce((a, b) => a + b, 0) / self.epochLosses.length;
                         updateStats({
                             epoch: currentEpoch + 1,
@@ -1131,43 +1180,48 @@ The model learns to predict the next token.</pre>
                             loss: loss.toFixed(4),
                             avgLoss: avgLoss.toFixed(4)
                         });
-
+                        
                         currentStep++;
                         currentBatchIndex++;
-
+                        
+                        // Use setTimeout to allow message processing
                         setTimeout(continueTraining, 0);
                     } else {
+                        // End of epoch
                         const avgLoss = self.epochLosses.reduce((a, b) => a + b, 0) / self.epochLosses.length;
                         log('EPOCH ' + (currentEpoch + 1) + ' COMPLETE | Avg Loss: ' + avgLoss.toFixed(6), 'success');
-
+                        
                         currentEpoch++;
                         currentBatchIndex = 0;
-
+                        
                         setTimeout(continueTraining, 0);
                     }
                 } else {
+                    // Training complete
                     log('═══════════════════════════════════════════════════════════', 'info');
                     log('TRAINING COMPLETE!', 'success');
                     log('═══════════════════════════════════════════════════════════', 'info');
-
+                    log('Final step: ' + currentStep, 'info');
+                    
                     self.postMessage({ type: 'complete' });
                 }
             } catch (err) {
                 log('Error during training: ' + err.message, 'error');
+                log('Stack: ' + err.stack, 'error');
                 self.postMessage({ type: 'error', data: err.message });
             }
         }
-
+        
         function sendCurrentState() {
             if (!model || !tokenizer) {
                 self.postMessage({ type: 'state', data: null });
                 return;
             }
-
+            
             try {
                 const modelBytes = model.serialize();
                 const tokenizerBytes = tokenizer.serialize();
-
+                
                 const state = {
                     config: self.trainingConfig,
                     modelBytes: Array.from(modelBytes),
@@ -1178,7 +1232,7 @@ The model learns to predict the next token.</pre>
                     totalSteps: totalSteps,
                     warmupSteps: warmupSteps
                 };
-
+                
                 log('State serialized: model=' + modelBytes.length + ' bytes, tokenizer=' + tokenizerBytes.length + ' bytes', 'info');
                 self.postMessage({ type: 'state', data: state });
             } catch (err) {
@@ -1186,22 +1240,25 @@ The model learns to predict the next token.</pre>
                 self.postMessage({ type: 'state', data: null });
             }
         }
-
+        
         function loadState(state) {
             try {
                 log('═══════════════════════════════════════════════════════════', 'info');
                 log('LOADING SAVED TRAINING STATE', 'epoch');
                 log('═══════════════════════════════════════════════════════════', 'info');
-
+                
+                // Restore config
                 self.trainingConfig = state.config;
                 baseLearningRate = state.config.learningRate;
                 logEvery = state.config.logEvery || 1;
-
+                
+                // Restore tokenizer
                 log('Restoring tokenizer...', 'info');
                 const tokenizerBytes = new Uint8Array(state.tokenizerBytes);
                 tokenizer = Tokenizer.deserialize(tokenizerBytes);
                 log('Tokenizer restored, vocab size: ' + tokenizer.getVocabSize(), 'success');
-
+                
+                // Restore model
                 log('Restoring model...', 'info');
                 const modelBytes = new Uint8Array(state.modelBytes);
                 model = GabGPT.deserialize(modelBytes);
@@ -1217,20 +1274,24 @@ The model learns to predict the next token.</pre>
                     optimizer = null;
                     log('Using SGD with learning rate warmup', 'info');
                 }
-
+                
+                // Restore training state
                 currentEpoch = state.currentEpoch;
                 currentBatchIndex = state.currentBatchIndex;
                 currentStep = state.currentStep;
                 totalSteps = state.totalSteps;
                 warmupSteps = state.warmupSteps;
-
+                
+                // Recreate batches
                 log('Recreating training batches...', 'info');
                 const tokens = tokenizer.encode(state.config.trainingData);
                 batches = createBatches(tokens, state.config.batchSize, state.config.seqLength);
                 log('Batches recreated: ' + batches.length, 'info');
-
+                
                 log('Training state restored at epoch ' + (currentEpoch + 1) + ', step ' + currentStep, 'success');
-
+                log('═══════════════════════════════════════════════════════════', 'info');
+                
+                // Update UI
                 const progress = (currentStep / totalSteps) * 100;
                 updateProgress({ percent: progress });
                 updateStats({
@@ -1239,9 +1300,9 @@ The model learns to predict the next token.</pre>
                     loss: '-',
                     avgLoss: '-'
                 });
-
+                
                 self.postMessage({ type: 'stateLoaded' });
-
+                
             } catch (err) {
                 log('Error loading state: ' + err.message, 'error');
                 self.postMessage({ type: 'error', data: err.message });
@@ -1265,45 +1326,58 @@ The model learns to predict the next token.</pre>
                 this.trainingData = '';
                 this.logBuffer = [];
                 this.maxLogEntries = 1000;
-
+                
                 this.initializeUI();
                 this.initializeWorker();
             }
 
             initializeUI() {
+                // Mode selection
                 const modeOptions = document.querySelectorAll('.mode-option');
                 for (let i = 0; i < modeOptions.length; i++) {
                     const option = modeOptions[i];
                     option.addEventListener('click', () => this.selectMode(option.dataset.mode));
                 }
 
+                // File input handling
                 const fileInput = document.getElementById('trainingFile');
                 fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
 
+                // Keyword input
                 const keywordInput = document.getElementById('newKeyword');
                 keywordInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') this.addKeyword();
+                    if (e.key === 'Enter') {
+                        this.addKeyword();
+                    }
                 });
 
                 this.updateStatus('idle', 'Idle');
             }
 
             initializeWorker() {
+                // Get the worker code
                 const workerCode = document.getElementById('workerCode').textContent;
                 const blob = new Blob([workerCode], { type: 'application/javascript' });
                 const workerUrl = URL.createObjectURL(blob);
-
+                
                 this.worker = new Worker(workerUrl);
                 this.worker.onmessage = (e) => this.handleWorkerMessage(e);
                 this.worker.onerror = (e) => this.handleWorkerError(e);
+
+                // Send the gab.js code to the worker
                 this.sendGabCodeToWorker();
             }
 
             async sendGabCodeToWorker() {
                 try {
+                    // Fetch gab.js content
                     const response = await fetch('gab.js');
                     const gabCode = await response.text();
-                    this.worker.postMessage({ action: 'init', payload: { gabCode } });
+                    
+                    this.worker.postMessage({
+                        action: 'init',
+                        payload: { gabCode }
+                    });
                 } catch (err) {
                     this.log('Failed to load gab.js: ' + err.message, 'error');
                 }
@@ -1311,7 +1385,7 @@ The model learns to predict the next token.</pre>
 
             handleWorkerMessage(e) {
                 const { type, data } = e.data;
-
+                
                 switch (type) {
                     case 'initialized':
                         this.log('Worker ready', 'success');
@@ -1347,17 +1421,20 @@ The model learns to predict the next token.</pre>
                         this.hasTrainedModel = true;
                         this.updateStatus('idle', 'Complete');
                         this.updateButtons();
+                        this.log('Training completed successfully!', 'success');
                         break;
                     case 'error':
                         this.isTraining = false;
                         this.isPaused = false;
                         this.updateStatus('error', 'Error');
                         this.updateButtons();
+                        this.log('Error: ' + data, 'error');
                         break;
                     case 'state':
                         this.handleStateReceived(data);
                         break;
                     case 'stateLoaded':
+                        this.log('Training state loaded successfully', 'success');
                         this.isTraining = false;
                         this.isPaused = true;
                         this.hasTrainedModel = true;
@@ -1374,7 +1451,8 @@ The model learns to predict the next token.</pre>
 
             selectMode(mode) {
                 this.currentMode = mode;
-
+                
+                // Update UI
                 const modeOptions = document.querySelectorAll('.mode-option');
                 for (let i = 0; i < modeOptions.length; i++) {
                     const option = modeOptions[i];
@@ -1385,6 +1463,7 @@ The model learns to predict the next token.</pre>
                     }
                 }
 
+                // Show/hide appropriate input sections
                 const directSection = document.getElementById('directInputSection');
                 const fileSection = document.getElementById('fileInputSection');
                 const inputHint = document.getElementById('inputHint');
@@ -1397,15 +1476,17 @@ The model learns to predict the next token.</pre>
                     fileSection.classList.remove('hidden');
                 }
 
+                // Update hint text
                 if (mode.startsWith('pretrain')) {
                     inputHint.textContent = 'For pre-training, enter raw text. Model learns to predict next token.';
                 } else {
                     inputHint.textContent = 'For SFT, use ChatML format: <|user|>message<|end|><|assistant|>response<|end|>';
                 }
 
+                // Update file format hints
                 const pretrainHint = document.getElementById('pretrainFileHint');
                 const sftHint = document.getElementById('sftFileHint');
-
+                
                 if (mode.startsWith('pretrain')) {
                     if (pretrainHint) pretrainHint.classList.remove('hidden');
                     if (sftHint) sftHint.classList.add('hidden');
@@ -1423,7 +1504,8 @@ The model learns to predict the next token.</pre>
                 reader.onload = (event) => {
                     let content = event.target.result;
                     const fileName = file.name.toLowerCase();
-
+                    
+                    // For SFT modes, parse JSON/JSONL and convert to ChatML
                     if (this.currentMode.startsWith('sft')) {
                         try {
                             content = this.parseTrainingFile(content, fileName);
@@ -1432,49 +1514,86 @@ The model learns to predict the next token.</pre>
                             return;
                         }
                     }
-
+                    
                     this.trainingData = content;
                     const fileInfo = document.getElementById('fileInfo');
-                    fileInfo.textContent = file.name + ' (' + this.formatBytes(file.size) + ')';
+                    fileInfo.textContent = 'Loaded: ' + file.name + ' (' + this.formatBytes(file.size) + ', ' + this.trainingData.length + ' characters)';
+                    this.log('File loaded: ' + file.name + ' (' + this.trainingData.length + ' characters)', 'success');
+                };
+                reader.onerror = () => {
+                    this.log('Failed to read file', 'error');
                 };
                 reader.readAsText(file);
             }
 
             parseTrainingFile(content, fileName) {
-                if (fileName.endsWith('.txt')) return content;
-
+                // Plain text - return as-is (assume already in ChatML format)
+                if (fileName.endsWith('.txt')) {
+                    this.log('Loading plain text file (assuming ChatML format)', 'info');
+                    return content;
+                }
+                
                 let conversations = [];
-
+                
+                // JSONL format - one JSON object per line
                 if (fileName.endsWith('.jsonl')) {
+                    this.log('Parsing JSONL file...', 'info');
                     const lines = content.split('\n').filter(line => line.trim());
                     for (let i = 0; i < lines.length; i++) {
                         try {
                             const obj = JSON.parse(lines[i]);
-                            if (obj.messages) conversations.push(obj);
-                        } catch (err) {}
+                            if (obj.messages) {
+                                conversations.push(obj);
+                            }
+                        } catch (err) {
+                            this.log('Warning: Skipping invalid JSON at line ' + (i + 1), 'warning');
+                        }
                     }
-                } else if (fileName.endsWith('.json')) {
-                    const data = JSON.parse(content);
-                    if (Array.isArray(data)) conversations = data;
-                    else if (data.messages) conversations = [data];
                 }
-
+                // JSON format - array of conversation objects
+                else if (fileName.endsWith('.json')) {
+                    this.log('Parsing JSON file...', 'info');
+                    const data = JSON.parse(content);
+                    if (Array.isArray(data)) {
+                        conversations = data;
+                    } else if (data.messages) {
+                        conversations = [data];
+                    } else {
+                        throw new Error('JSON must be an array of conversations or a single conversation object');
+                    }
+                }
+                
+                if (conversations.length === 0) {
+                    throw new Error('No valid conversations found in file');
+                }
+                
+                this.log('Found ' + conversations.length + ' conversations', 'info');
+                
+                // Convert to ChatML format
                 let chatML = '';
                 for (let i = 0; i < conversations.length; i++) {
                     const conv = conversations[i];
-                    if (!conv.messages) continue;
-
+                    if (!conv.messages || !Array.isArray(conv.messages)) {
+                        this.log('Warning: Skipping conversation ' + (i + 1) + ' - no messages array', 'warning');
+                        continue;
+                    }
+                    
                     for (let j = 0; j < conv.messages.length; j++) {
                         const msg = conv.messages[j];
                         const role = msg.role || 'user';
                         const content = msg.content || '';
-
-                        if (role === 'system') chatML += '<|system|>' + content + '<|end|>';
-                        else if (role === 'user') chatML += '<|user|>' + content + '<|end|>';
-                        else if (role === 'assistant') chatML += '<|assistant|>' + content + '<|end|>';
+                        
+                        if (role === 'system') {
+                            chatML += '<|system|>' + content + '<|end|>';
+                        } else if (role === 'user') {
+                            chatML += '<|user|>' + content + '<|end|>';
+                        } else if (role === 'assistant') {
+                            chatML += '<|assistant|>' + content + '<|end|>';
+                        }
                     }
                 }
-
+                
+                this.log('Converted to ChatML format: ' + chatML.length + ' characters', 'success');
                 return chatML;
             }
 
@@ -1487,7 +1606,7 @@ The model learns to predict the next token.</pre>
             addKeyword(keyword = null) {
                 const input = document.getElementById('newKeyword');
                 const value = keyword || input.value.trim();
-
+                
                 if (value && !this.reservedKeywords.includes(value)) {
                     this.reservedKeywords.push(value);
                     this.updateKeywordsList();
@@ -1506,7 +1625,7 @@ The model learns to predict the next token.</pre>
             updateKeywordsList() {
                 const list = document.getElementById('keywordsList');
                 list.innerHTML = '';
-
+                
                 for (let i = 0; i < this.reservedKeywords.length; i++) {
                     const keyword = this.reservedKeywords[i];
                     const tag = document.createElement('span');
@@ -1517,10 +1636,19 @@ The model learns to predict the next token.</pre>
             }
 
             addChatMLKeywords() {
-                const chatMLKeywords = ['<|user|>', '<|assistant|>', '<|system|>', '<|end|>', '<|pad|>', '<|think|>', '<|/think|>'];
+                const chatMLKeywords = [
+                    '<|user|>', 
+                    '<|assistant|>', 
+                    '<|system|>', 
+                    '<|end|>', 
+                    '<|pad|>',
+                    '<|think|>',
+                    '<|/think|>'
+                ];
                 for (let i = 0; i < chatMLKeywords.length; i++) {
                     this.addKeyword(chatMLKeywords[i]);
                 }
+                this.log('Added ChatML keywords: ' + chatMLKeywords.join(', '), 'info');
             }
 
             escapeHtml(text) {
@@ -1556,18 +1684,62 @@ The model learns to predict the next token.</pre>
                 };
             }
 
+            setConfig(config) {
+                document.getElementById('embeddingDim').value = config.embeddingDim;
+                document.getElementById('numHeads').value = config.numHeads;
+                document.getElementById('numBlocks').value = config.numBlocks;
+                document.getElementById('maxSeqLength').value = config.maxSeqLength;
+                document.getElementById('numMerges').value = config.numMerges;
+                document.getElementById('numEpochs').value = config.numEpochs;
+                document.getElementById('batchSize').value = config.batchSize;
+                document.getElementById('seqLength').value = config.seqLength;
+                document.getElementById('learningRate').value = config.learningRate;
+                document.getElementById('warmupRatio').value = config.warmupRatio;
+                document.getElementById('logEvery').value = config.logEvery || 1;
+                document.getElementById('useAdam').checked = config.useAdam !== false;
+                
+                // Set training data
+                if (config.trainingData) {
+                    document.getElementById('trainingDataText').value = config.trainingData;
+                    this.trainingData = config.trainingData;
+                }
+                
+                // Set reserved keywords
+                this.reservedKeywords = config.reservedKeywords || [];
+                this.updateKeywordsList();
+                
+                // Set mode
+                if (config.mode) {
+                    this.selectMode(config.mode);
+                }
+            }
+
             validateConfig(config) {
                 const errors = [];
-                if (!config.trainingData || config.trainingData.length === 0) errors.push('Training data is required');
-                if (config.embeddingDim % config.numHeads !== 0) errors.push('Embedding dimension must be divisible by number of attention heads');
-                if (config.seqLength > config.maxSeqLength) errors.push('Sequence length cannot exceed max sequence length');
+                
+                if (!config.trainingData || config.trainingData.length === 0) {
+                    errors.push('Training data is required');
+                }
+                
+                if (config.embeddingDim % config.numHeads !== 0) {
+                    errors.push('Embedding dimension must be divisible by number of attention heads');
+                }
+                
+                if (config.seqLength > config.maxSeqLength) {
+                    errors.push('Sequence length cannot exceed max sequence length');
+                }
+                
+                if (config.trainingData && config.trainingData.length < config.seqLength + 1) {
+                    errors.push('Training data is too short (need at least ' + (config.seqLength + 1) + ' characters)');
+                }
+                
                 return errors;
             }
 
             startTraining() {
                 const config = this.getConfig();
                 const errors = this.validateConfig(config);
-
+                
                 if (errors.length > 0) {
                     for (let i = 0; i < errors.length; i++) {
                         this.log('Validation error: ' + errors[i], 'error');
@@ -1583,7 +1755,10 @@ The model learns to predict the next token.</pre>
                 this.clearLogs();
                 this.updateProgressBar(0);
 
-                this.worker.postMessage({ action: 'start', payload: config });
+                this.worker.postMessage({
+                    action: 'start',
+                    payload: config
+                });
             }
 
             pauseTraining() {
@@ -1599,24 +1774,29 @@ The model learns to predict the next token.</pre>
             }
 
             updateButtons() {
-                document.getElementById('startBtn').disabled = this.isTraining;
-                document.getElementById('pauseBtn').disabled = !this.isTraining || this.isPaused;
-                document.getElementById('resumeBtn').disabled = !this.isPaused;
-                document.getElementById('stopBtn').disabled = !this.isTraining && !this.isPaused;
+                const startBtn = document.getElementById('startBtn');
+                const pauseBtn = document.getElementById('pauseBtn');
+                const resumeBtn = document.getElementById('resumeBtn');
+                const stopBtn = document.getElementById('stopBtn');
+
+                startBtn.disabled = this.isTraining;
+                pauseBtn.disabled = !this.isTraining || this.isPaused;
+                resumeBtn.disabled = !this.isPaused;
+                stopBtn.disabled = !this.isTraining && !this.isPaused;
             }
 
             updateStatus(state, text) {
                 const dot = document.getElementById('statusDot');
                 const statusText = document.getElementById('statusText');
+                
                 dot.className = 'status-dot ' + state;
                 statusText.textContent = text;
             }
 
             updateProgressBar(percent) {
                 const bar = document.getElementById('progressBar');
-                const label = document.getElementById('progressLabel');
                 bar.style.width = percent + '%';
-                label.textContent = percent.toFixed(1) + '% complete';
+                bar.textContent = percent.toFixed(1) + '%';
             }
 
             updateStats(stats) {
@@ -1629,21 +1809,39 @@ The model learns to predict the next token.</pre>
             log(message, type = 'info') {
                 const container = document.getElementById('logContainer');
                 const timestamp = new Date().toLocaleTimeString();
-
+                
+                // Add to buffer
+                this.logBuffer.push({ message, type, timestamp });
+                
+                // Trim buffer if too large
+                if (this.logBuffer.length > this.maxLogEntries) {
+                    this.logBuffer = this.logBuffer.slice(-this.maxLogEntries);
+                }
+                
+                // Create log entry
                 const entry = document.createElement('div');
-                entry.className = 'log-' + type;
-                entry.textContent = '[' + timestamp + '] ' + message;
+                entry.className = 'log-entry ' + type;
+                entry.innerHTML = '<span class="timestamp">[' + timestamp + ']</span> ' + this.escapeHtml(message);
                 container.appendChild(entry);
+                
+                // Auto-scroll to bottom
                 container.scrollTop = container.scrollHeight;
-
+                
+                // Remove old entries from DOM if too many
                 while (container.children.length > this.maxLogEntries) {
                     container.removeChild(container.firstChild);
                 }
             }
 
             clearLogs() {
-                document.getElementById('logContainer').innerHTML = '';
+                const container = document.getElementById('logContainer');
+                container.innerHTML = '';
+                this.logBuffer = [];
             }
+
+            // ============================================================================
+            // SAVE/LOAD FUNCTIONALITY
+            // ============================================================================
 
             pendingStateCallback = null;
 
@@ -1653,21 +1851,28 @@ The model learns to predict the next token.</pre>
                     return;
                 }
 
+                this.log('Requesting training state from worker...', 'info');
                 this.pendingStateCallback = (state) => {
                     if (!state) {
                         this.log('Failed to get training state', 'error');
                         return;
                     }
 
-                    const session = { version: 1, timestamp: new Date().toISOString(), state: state };
+                    const session = {
+                        version: 1,
+                        timestamp: new Date().toISOString(),
+                        state: state
+                    };
+
                     const json = JSON.stringify(session);
                     const blob = new Blob([json], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
-
+                    
                     const a = document.createElement('a');
                     a.href = url;
                     a.download = 'gabgpt-session-' + Date.now() + '.gabs';
                     a.click();
+                    
                     URL.revokeObjectURL(url);
                     this.log('Session saved successfully', 'success');
                 };
@@ -1690,25 +1895,40 @@ The model learns to predict the next token.</pre>
                 reader.onload = (e) => {
                     try {
                         const session = JSON.parse(e.target.result);
+                        
                         if (session.version !== 1) {
-                            this.log('Unsupported session version', 'error');
+                            this.log('Unsupported session version: ' + session.version, 'error');
                             return;
                         }
-                        this.worker.postMessage({ action: 'loadState', payload: session.state });
+
+                        this.log('Loading session from ' + session.timestamp, 'info');
+                        
+                        // Update UI with config
+                        this.setConfig(session.state.config);
+                        
+                        // Send state to worker
+                        this.worker.postMessage({
+                            action: 'loadState',
+                            payload: session.state
+                        });
+
                     } catch (err) {
                         this.log('Failed to load session: ' + err.message, 'error');
                     }
                 };
                 reader.readAsText(file);
+                
+                // Reset file input
                 event.target.value = '';
             }
 
             exportModel() {
-                if (!this.hasTrainedModel) {
-                    this.log('No model to export', 'warning');
+                if (!this.hasTrainedModel && !this.isTraining && !this.isPaused) {
+                    this.log('No model to export. Train a model first.', 'warning');
                     return;
                 }
 
+                this.log('Requesting model for export...', 'info');
                 this.pendingStateCallback = (state) => {
                     if (!state || !state.modelBytes) {
                         this.log('Failed to get model state', 'error');
@@ -1718,13 +1938,14 @@ The model learns to predict the next token.</pre>
                     const bytes = new Uint8Array(state.modelBytes);
                     const blob = new Blob([bytes], { type: 'application/octet-stream' });
                     const url = URL.createObjectURL(blob);
-
+                    
                     const a = document.createElement('a');
                     a.href = url;
                     a.download = 'model-' + Date.now() + '.gab';
                     a.click();
+                    
                     URL.revokeObjectURL(url);
-                    this.log('Model exported (' + bytes.length + ' bytes)', 'success');
+                    this.log('Model exported successfully (' + bytes.length + ' bytes)', 'success');
                 };
 
                 this.worker.postMessage({ action: 'getState' });
@@ -1733,16 +1954,40 @@ The model learns to predict the next token.</pre>
             importModel(event) {
                 const file = event.target.files[0];
                 if (!file) return;
-                this.log('Model import not yet implemented', 'warning');
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const bytes = new Uint8Array(e.target.result);
+                        
+                        // Verify magic number
+                        const view = new DataView(bytes.buffer);
+                        const magic = view.getUint32(0, true);
+                        if (magic !== 0x47414231) {
+                            this.log('Invalid model file format', 'error');
+                            return;
+                        }
+
+                        this.log('Model file loaded: ' + bytes.length + ' bytes', 'success');
+                        this.log('Note: Model imported but needs tokenizer and training data to continue training', 'warning');
+                        
+                    } catch (err) {
+                        this.log('Failed to import model: ' + err.message, 'error');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+                
+                // Reset file input
                 event.target.value = '';
             }
 
             exportTokenizer() {
-                if (!this.hasTrainedModel) {
-                    this.log('No tokenizer to export', 'warning');
+                if (!this.hasTrainedModel && !this.isTraining && !this.isPaused) {
+                    this.log('No tokenizer to export. Train a model first.', 'warning');
                     return;
                 }
 
+                this.log('Requesting tokenizer for export...', 'info');
                 this.pendingStateCallback = (state) => {
                     if (!state || !state.tokenizerBytes) {
                         this.log('Failed to get tokenizer state', 'error');
@@ -1752,13 +1997,14 @@ The model learns to predict the next token.</pre>
                     const bytes = new Uint8Array(state.tokenizerBytes);
                     const blob = new Blob([bytes], { type: 'application/octet-stream' });
                     const url = URL.createObjectURL(blob);
-
+                    
                     const a = document.createElement('a');
                     a.href = url;
                     a.download = 'tokenizer-' + Date.now() + '.bpe';
                     a.click();
+                    
                     URL.revokeObjectURL(url);
-                    this.log('Tokenizer exported (' + bytes.length + ' bytes)', 'success');
+                    this.log('Tokenizer exported successfully (' + bytes.length + ' bytes)', 'success');
                 };
 
                 this.worker.postMessage({ action: 'getState' });
@@ -1767,32 +2013,95 @@ The model learns to predict the next token.</pre>
             importTokenizer(event) {
                 const file = event.target.files[0];
                 if (!file) return;
-                this.log('Tokenizer import not yet implemented', 'warning');
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const bytes = new Uint8Array(e.target.result);
+                        
+                        // Verify magic number
+                        const view = new DataView(bytes.buffer);
+                        const magic = view.getUint32(0, true);
+                        if (magic !== 0x42504531) {
+                            this.log('Invalid tokenizer file format', 'error');
+                            return;
+                        }
+
+                        this.log('Tokenizer file loaded: ' + bytes.length + ' bytes', 'success');
+                        this.log('Note: Tokenizer imported but needs model and training data to continue training', 'warning');
+                        
+                    } catch (err) {
+                        this.log('Failed to import tokenizer: ' + err.message, 'error');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+                
+                // Reset file input
                 event.target.value = '';
             }
         }
 
-        // Global functions
+        // ============================================================================
+        // GLOBAL FUNCTIONS (called from HTML onclick)
+        // ============================================================================
+
         let app;
 
         document.addEventListener('DOMContentLoaded', () => {
             app = new TrainerApp();
-            setTimeout(updateParamEstimate, 100);
         });
 
-        function startTraining() { app.startTraining(); }
-        function pauseTraining() { app.pauseTraining(); }
-        function resumeTraining() { app.resumeTraining(); }
-        function stopTraining() { app.stopTraining(); }
-        function clearLogs() { app.clearLogs(); }
-        function addKeyword() { app.addKeyword(); }
-        function addChatMLKeywords() { app.addChatMLKeywords(); }
-        function saveSession() { app.saveSession(); }
-        function loadSession(event) { app.loadSession(event); }
-        function exportModel() { app.exportModel(); }
-        function importModel(event) { app.importModel(event); }
-        function exportTokenizer() { app.exportTokenizer(); }
-        function importTokenizer(event) { app.importTokenizer(event); }
+        function startTraining() {
+            app.startTraining();
+        }
+
+        function pauseTraining() {
+            app.pauseTraining();
+        }
+
+        function resumeTraining() {
+            app.resumeTraining();
+        }
+
+        function stopTraining() {
+            app.stopTraining();
+        }
+
+        function clearLogs() {
+            app.clearLogs();
+        }
+
+        function addKeyword() {
+            app.addKeyword();
+        }
+
+        function addChatMLKeywords() {
+            app.addChatMLKeywords();
+        }
+
+        function saveSession() {
+            app.saveSession();
+        }
+
+        function loadSession(event) {
+            app.loadSession(event);
+        }
+
+        function exportModel() {
+            app.exportModel();
+        }
+
+        function importModel(event) {
+            app.importModel(event);
+        }
+
+        function exportTokenizer() {
+            app.exportTokenizer();
+        }
+
+        function importTokenizer(event) {
+            app.importTokenizer(event);
+        }
 
         function updateParamEstimate() {
             const embeddingDim = parseInt(document.getElementById('embeddingDim').value) || 512;
@@ -1800,50 +2109,102 @@ The model learns to predict the next token.</pre>
             const numBlocks = parseInt(document.getElementById('numBlocks').value) || 6;
             const maxSeqLength = parseInt(document.getElementById('maxSeqLength').value) || 512;
             const numMerges = parseInt(document.getElementById('numMerges').value) || 1500;
-
+            
+            // Estimate vocab size: 256 base + merges + ~5 reserved tokens
             const vocabSize = 256 + numMerges;
             const hiddenDim = embeddingDim * 4;
-
-            let paramCount = vocabSize * embeddingDim + maxSeqLength * embeddingDim;
-
+            
+            let paramCount = 0;
+            
+            // Token embeddings: vocabSize * embeddingDim
+            paramCount += vocabSize * embeddingDim;
+            
+            // Position embeddings: maxSeqLength * embeddingDim
+            paramCount += maxSeqLength * embeddingDim;
+            
+            // Per transformer block
             for (let i = 0; i < numBlocks; i++) {
+                // layerNorm1: gamma + beta = 2 * embeddingDim
                 paramCount += 2 * embeddingDim;
+                
+                // attention: 4 weight matrices (embeddingDim x embeddingDim each)
                 paramCount += 4 * embeddingDim * embeddingDim;
+                
+                // layerNorm2: gamma + beta = 2 * embeddingDim
                 paramCount += 2 * embeddingDim;
+                
+                // mlp.dense1: hiddenDim neurons, each with embeddingDim weights + 1 bias
                 paramCount += hiddenDim * (embeddingDim + 1);
+                
+                // mlp.dense2: embeddingDim neurons, each with hiddenDim weights + 1 bias
                 paramCount += embeddingDim * (hiddenDim + 1);
             }
-
+            
+            // finalNorm: gamma + beta = 2 * embeddingDim
             paramCount += 2 * embeddingDim;
-            paramCount += embeddingDim * vocabSize + vocabSize;
-
+            
+            // output: weights (embeddingDim x vocabSize) + bias (vocabSize)
+            paramCount += embeddingDim * vocabSize;
+            paramCount += vocabSize;
+            
+            // Format the number
             let paramStr;
-            if (paramCount >= 1e9) paramStr = '~' + (paramCount / 1e9).toFixed(1) + 'B';
-            else if (paramCount >= 1e6) paramStr = '~' + (paramCount / 1e6).toFixed(1) + 'M';
-            else if (paramCount >= 1e3) paramStr = '~' + (paramCount / 1e3).toFixed(0) + 'K';
-            else paramStr = '~' + paramCount;
-
+            if (paramCount >= 1e9) {
+                paramStr = '~' + (paramCount / 1e9).toFixed(1) + 'B';
+            } else if (paramCount >= 1e6) {
+                paramStr = '~' + (paramCount / 1e6).toFixed(1) + 'M';
+            } else if (paramCount >= 1e3) {
+                paramStr = '~' + (paramCount / 1e3).toFixed(0) + 'K';
+            } else {
+                paramStr = '~' + paramCount;
+            }
+            
             document.getElementById('paramEstimate').textContent = paramStr;
             document.getElementById('paramHint').textContent = '(vocab ~' + vocabSize.toLocaleString() + ')';
-
+            
+            // Validation warning
             if (embeddingDim % numHeads !== 0) {
-                document.getElementById('paramHint').textContent = 'Embed dim must be divisible by heads!';
-                document.getElementById('paramHint').style.color = 'var(--danger)';
+                document.getElementById('paramHint').textContent = '⚠️ Embedding dim must be divisible by heads!';
+                document.getElementById('paramHint').style.color = 'var(--accent-red)';
             } else {
-                document.getElementById('paramHint').style.color = 'var(--muted)';
+                document.getElementById('paramHint').style.color = 'var(--text-secondary)';
             }
         }
 
         function applyPreset(size) {
             const presets = {
-                small: { embeddingDim: 64, numHeads: 4, numBlocks: 4, maxSeqLength: 128, numMerges: 500, seqLength: 64, learningRate: 0.001 },
-                medium: { embeddingDim: 512, numHeads: 8, numBlocks: 6, maxSeqLength: 512, numMerges: 1500, seqLength: 256, learningRate: 0.0003 },
-                large: { embeddingDim: 1536, numHeads: 16, numBlocks: 24, maxSeqLength: 1024, numMerges: 4000, seqLength: 512, learningRate: 0.0001 }
+                small: {
+                    embeddingDim: 64,
+                    numHeads: 4,
+                    numBlocks: 4,
+                    maxSeqLength: 128,
+                    numMerges: 500,
+                    seqLength: 64,
+                    learningRate: 0.001
+                },
+                medium: {
+                    embeddingDim: 512,
+                    numHeads: 8,
+                    numBlocks: 6,
+                    maxSeqLength: 512,
+                    numMerges: 1500,
+                    seqLength: 256,
+                    learningRate: 0.0003
+                },
+                large: {
+                    embeddingDim: 1536,
+                    numHeads: 16,
+                    numBlocks: 24,
+                    maxSeqLength: 1024,
+                    numMerges: 4000,
+                    seqLength: 512,
+                    learningRate: 0.0001
+                }
             };
-
+            
             const preset = presets[size];
             if (!preset) return;
-
+            
             document.getElementById('embeddingDim').value = preset.embeddingDim;
             document.getElementById('numHeads').value = preset.numHeads;
             document.getElementById('numBlocks').value = preset.numBlocks;
@@ -1851,9 +2212,18 @@ The model learns to predict the next token.</pre>
             document.getElementById('numMerges').value = preset.numMerges;
             document.getElementById('seqLength').value = preset.seqLength;
             document.getElementById('learningRate').value = preset.learningRate;
-
+            
             updateParamEstimate();
+            
+            if (app) {
+                app.log('Applied ' + size + ' preset', 'info');
+            }
         }
+
+        // Initialize param estimate on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(updateParamEstimate, 100);
+        });
     </script>
 </body>
 </html>

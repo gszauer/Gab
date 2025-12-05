@@ -6,98 +6,48 @@
     <title>GabGPT Chat</title>
     <style>
         :root {
-            color-scheme: dark;
-            --bg:#0a0a0f;
-            --bg-2:#0e0e16;
-            --panel:#12121c;
-            --panel-2:#171726;
-            --text:#e9e9f2;
-            --muted:#a5a7bf;
-            --line:#1e1e2e;
-            --pink:#ff2e88;
-            --pink-2:#ff86c3;
-            --glow: 0 0 .5rem var(--pink), 0 0 1.25rem color-mix(in oklab, var(--pink) 70%, white 0%), 0 0 2.5rem color-mix(in oklab, var(--pink) 35%, black 65%);
-            --radius:16px;
-            --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
-            --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            --danger:#ff5470;
-            --success:#2cb67d;
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --accent-purple: #a371f7;
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
-            margin: 0;
-            height: 100vh;
-            font-family: var(--font);
-            color: var(--text);
-            background:
-                radial-gradient(1200px 520px at 50% -160px, rgba(255,46,136,.12), transparent 75%),
-                linear-gradient(180deg, #090914 0%, #050509 45%, #030306 75%, #020203 100%);
-            background-color: #020203;
-            background-repeat: no-repeat;
-            background-size: 130% 70%, 100% 100%;
-            background-position: center top, center top;
-            background-attachment: fixed;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             line-height: 1.6;
-            overflow: hidden;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }
 
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            background-image: linear-gradient(rgba(255,255,255,.03), rgba(255,255,255,0) 2px);
-            background-size: 100% 3px;
-            mix-blend-mode: overlay;
-            opacity: .25;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            body::before { display: none; }
-            * { animation: none !important; transition: none !important; }
-        }
-
-        .container {
-            width: min(1000px, 92vw);
-            margin-inline: auto;
-        }
-
-        header {
-            background: linear-gradient(180deg, #131321, #11111c);
-            border-bottom: 1px solid var(--line);
-            padding: 1.5rem 0;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            backdrop-filter: blur(10px);
-        }
-
-        nav {
+        .top-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 1rem;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
         }
 
-        .logo {
-            font-weight: 900;
-            font-size: 1.25rem;
-            color: var(--text);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .logo .pink {
-            color: var(--pink);
-            text-shadow: var(--glow);
+        .top-bar h1 {
+            font-size: 1rem;
+            color: var(--accent-blue);
+            font-family: 'SF Mono', 'Consolas', monospace;
         }
 
         .header-controls {
@@ -111,30 +61,28 @@
             align-items: center;
             gap: 6px;
             font-size: 0.8rem;
-            color: var(--muted);
+            color: var(--text-secondary);
         }
 
         .control-group input {
             width: 60px;
             padding: 4px 8px;
-            background: #0f0f1b;
-            border: 1px solid #2a2a3e;
-            border-radius: 8px;
-            color: var(--text);
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
             font-size: 0.8rem;
-            font-family: var(--mono);
         }
 
         .control-group input:focus {
             outline: none;
-            border-color: var(--pink);
-            box-shadow: 0 0 0 1px color-mix(in oklab, var(--pink) 50%, transparent);
+            border-color: var(--accent-blue);
         }
 
         .divider {
             width: 1px;
             height: 24px;
-            background: var(--line);
+            background: var(--border-color);
         }
 
         .model-info {
@@ -142,7 +90,7 @@
             align-items: center;
             gap: 15px;
             font-size: 0.8rem;
-            color: var(--muted);
+            color: var(--text-secondary);
         }
 
         .model-info .status {
@@ -155,71 +103,22 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: var(--muted);
+            background: var(--text-secondary);
         }
 
         .model-info .status-dot.loaded {
-            background: var(--success);
+            background: var(--accent-green);
         }
 
-        .back-btn {
-            appearance: none;
-            border: 1px solid color-mix(in oklab, var(--pink) 35%, #ffffff00 65%);
-            color: var(--text);
-            background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
-            padding: .45rem .85rem;
-            border-radius: 999px;
-            cursor: pointer;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            font-size: 0.9rem;
-            transition: transform .12s ease, box-shadow .15s ease;
-        }
-
-        .back-btn:hover {
-            box-shadow: var(--glow);
-            transform: translateY(-1px);
-        }
-
-        main {
+        .main-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            padding: 2rem 0;
-            min-height: 0;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
             overflow: hidden;
-        }
-
-        .tool-article {
-            background: linear-gradient(180deg, #131321, #11111c);
-            border: 1px solid #222238;
-            border-radius: var(--radius);
-            padding: 2rem;
-            box-shadow: 0 18px 50px rgba(0,0,0,.45), 0 0 60px -10px rgba(255,46,136,.15);
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-            overflow: hidden;
-        }
-
-        .section-title {
-            font-size: 0.95rem;
-            margin-bottom: 18px;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: var(--muted);
-        }
-
-        .panel {
-            background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 80%, black 20%), var(--panel-2));
-            border: 1px solid color-mix(in oklab, var(--pink) 12%, #1f1f2c 88%);
-            border-radius: 18px;
-            padding: 24px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45);
         }
 
         /* Loading Screen */
@@ -230,22 +129,19 @@
             align-items: center;
             justify-content: center;
             gap: 30px;
-            padding: 20px;
         }
 
         .load-screen h2 {
             font-size: 1.5rem;
-            color: var(--text);
-            font-weight: 600;
-            margin: 0;
+            color: var(--text-primary);
+            font-weight: 500;
         }
 
         .load-screen p {
-            color: var(--muted);
+            color: var(--text-secondary);
             font-size: 0.9rem;
             text-align: center;
             max-width: 400px;
-            margin: 0;
         }
 
         .file-loaders {
@@ -258,9 +154,9 @@
         .file-loader {
             width: 200px;
             padding: 30px 20px;
-            background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 80%, black 20%), var(--panel-2));
-            border: 2px dashed #2a2a3e;
-            border-radius: 14px;
+            background: var(--bg-secondary);
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
@@ -268,12 +164,12 @@
         }
 
         .file-loader:hover {
-            border-color: var(--pink);
-            background: rgba(255, 46, 136, 0.05);
+            border-color: var(--accent-blue);
+            background: var(--bg-tertiary);
         }
 
         .file-loader.loaded {
-            border-color: var(--success);
+            border-color: var(--accent-green);
             border-style: solid;
         }
 
@@ -291,41 +187,40 @@
 
         .file-loader .label {
             font-size: 0.9rem;
-            color: var(--text);
+            color: var(--text-primary);
             margin-bottom: 5px;
         }
 
         .file-loader .hint {
             font-size: 0.75rem;
-            color: var(--muted);
+            color: var(--text-secondary);
         }
 
         .file-loader .filename {
             font-size: 0.75rem;
-            color: var(--success);
+            color: var(--accent-green);
             margin-top: 8px;
             word-break: break-all;
         }
 
         .start-btn {
             padding: 12px 40px;
-            background: linear-gradient(120deg, var(--success), color-mix(in oklab, var(--success) 70%, white));
-            color: #050509;
+            background: var(--accent-green);
+            color: #000;
             border: none;
-            border-radius: 999px;
+            border-radius: 6px;
             font-size: 1rem;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+            transition: all 0.2s;
         }
 
         .start-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 0 .5rem var(--success), 0 0 1.25rem color-mix(in oklab, var(--success) 70%, white 0%);
+            background: #56d364;
         }
 
         .start-btn:disabled {
-            opacity: 0.45;
+            opacity: 0.4;
             cursor: not-allowed;
         }
 
@@ -339,33 +234,33 @@
             flex: 1;
             max-width: 200px;
             padding: 15px;
-            background: #0f0f1b;
-            border: 2px solid #2a2a3e;
-            border-radius: 12px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
             cursor: pointer;
             text-align: center;
             transition: all 0.2s;
         }
 
         .mode-option:hover {
-            border-color: var(--pink);
+            border-color: var(--accent-blue);
         }
 
         .mode-option.active {
-            border-color: var(--success);
-            background: rgba(44, 182, 125, 0.1);
+            border-color: var(--accent-green);
+            background: rgba(63, 185, 80, 0.1);
         }
 
         .mode-option .mode-label {
             font-size: 0.9rem;
             font-weight: 600;
-            color: var(--text);
+            color: var(--text-primary);
             margin-bottom: 4px;
         }
 
         .mode-option .mode-hint {
             font-size: 0.7rem;
-            color: var(--muted);
+            color: var(--text-secondary);
         }
 
         /* Chat Interface */
@@ -373,7 +268,7 @@
             flex: 1;
             display: none;
             flex-direction: column;
-            min-height: 0;
+            overflow: hidden;
         }
 
         .chat-container.active {
@@ -383,7 +278,7 @@
         .chat-messages {
             flex: 1;
             overflow-y: auto;
-            padding: 20px 12px 20px 0;
+            padding: 20px 0;
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -412,13 +307,13 @@
         }
 
         .message.user .avatar {
-            background: var(--pink);
-            color: #050509;
+            background: var(--accent-blue);
+            color: #000;
         }
 
         .message.assistant .avatar {
-            background: var(--pink-2);
-            color: #050509;
+            background: var(--accent-purple);
+            color: #fff;
         }
 
         .message .content {
@@ -429,23 +324,23 @@
         }
 
         .message.user .content {
-            background: var(--pink);
-            color: #050509;
+            background: var(--accent-blue);
+            color: #000;
             border-bottom-right-radius: 4px;
         }
 
         .message.assistant .content {
-            background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 80%, black 20%), var(--panel-2));
-            border: 1px solid color-mix(in oklab, var(--pink) 12%, #1f1f2c 88%);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
             border-bottom-left-radius: 4px;
         }
 
         .message .content.generating {
-            color: var(--muted);
+            color: var(--text-secondary);
         }
 
         .message .content.generating::after {
-            content: '';
+            content: '▋';
             animation: blink 1s infinite;
         }
 
@@ -456,15 +351,15 @@
 
         .chat-input-container {
             padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid var(--border-color);
         }
 
         .chat-input-wrapper {
             display: flex;
             gap: 10px;
-            background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 80%, black 20%), var(--panel-2));
-            border: 1px solid color-mix(in oklab, var(--pink) 12%, #1f1f2c 88%);
-            border-radius: 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
             padding: 8px;
         }
 
@@ -472,7 +367,7 @@
             flex: 1;
             background: none;
             border: none;
-            color: var(--text);
+            color: var(--text-primary);
             font-size: 0.95rem;
             padding: 8px 12px;
             resize: none;
@@ -485,46 +380,45 @@
         }
 
         .chat-input::placeholder {
-            color: var(--muted);
+            color: var(--text-secondary);
         }
 
         .send-btn {
             padding: 8px 20px;
-            background: linear-gradient(120deg, var(--pink), var(--pink-2));
-            color: #050509;
+            background: var(--accent-blue);
+            color: #000;
             border: none;
-            border-radius: 999px;
+            border-radius: 6px;
             font-size: 0.9rem;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+            transition: all 0.2s;
             align-self: flex-end;
         }
 
         .send-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: var(--glow);
+            background: #79b8ff;
         }
 
         .send-btn:disabled {
-            opacity: 0.45;
+            opacity: 0.4;
             cursor: not-allowed;
         }
 
         .clear-btn {
             padding: 4px 12px;
             background: none;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 999px;
-            color: var(--muted);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-secondary);
             font-size: 0.75rem;
             cursor: pointer;
             transition: all 0.2s;
         }
 
         .clear-btn:hover {
-            border-color: var(--danger);
-            color: var(--danger);
+            border-color: var(--accent-red);
+            color: var(--accent-red);
         }
 
         .hidden {
@@ -532,114 +426,103 @@
         }
 
         .error-message {
-            background: rgba(255, 84, 112, 0.1);
-            border: 1px solid var(--danger);
-            color: var(--danger);
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
             padding: 12px 16px;
-            border-radius: 12px;
+            border-radius: 6px;
             font-size: 0.85rem;
             margin-top: 15px;
-        }
-
-        @media (max-width: 768px) {
-            .tool-article { padding: 1.5rem; }
-            nav { flex-direction: column; }
-            .header-controls { flex-wrap: wrap; justify-content: center; }
         }
     </style>
 </head>
 <body>
-    <header>
-        <nav class="container">
-            <a href="index.html" class="logo">
-                The Gift of <span class="pink">Gab</span>
-            </a>
-            <div class="header-controls">
-                <div class="control-group">
-                    <label>Temp:</label>
-                    <input type="number" id="temperature" value="0.7" min="0.1" max="2" step="0.1">
-                </div>
-                <div class="control-group">
-                    <label>Max tokens:</label>
-                    <input type="number" id="maxTokens" value="100" min="1" max="500" step="10">
-                </div>
-                <div class="divider"></div>
-                <div class="model-info">
-                    <div class="status">
-                        <span class="status-dot" id="tokenizerStatus"></span>
-                        <span>Tokenizer</span>
-                    </div>
-                    <div class="status">
-                        <span class="status-dot" id="modelStatus"></span>
-                        <span>Model</span>
-                    </div>
-                </div>
-                <button class="clear-btn" onclick="clearChat()">Clear Chat</button>
-                <a href="blog_training.html" class="back-btn">Back to Blog</a>
+    <div class="top-bar">
+        <h1>GabGPT Chat</h1>
+        <div class="header-controls">
+            <button class="clear-btn" id="clearBtn" onclick="clearChat()">Clear Chat</button>
+            <div class="divider"></div>
+            <div class="control-group">
+                <label>Temp:</label>
+                <input type="number" id="temperature" value="0.7" min="0.1" max="2" step="0.1">
             </div>
-        </nav>
-    </header>
-
-    <main class="container">
-        <article class="tool-article">
-            <!-- Load Screen -->
-            <div class="load-screen" id="loadScreen">
-                <h2>Load Your Model</h2>
-                <p>Upload your trained tokenizer and model files to start chatting.</p>
-
-                <div class="file-loaders">
-                    <div class="file-loader" id="tokenizerLoader">
-                        <input type="file" accept=".bpe" onchange="loadTokenizer(event)">
-                        <div class="icon">📝</div>
-                        <div class="label">Tokenizer</div>
-                        <div class="hint">.bpe file</div>
-                        <div class="filename" id="tokenizerFilename"></div>
-                    </div>
-
-                    <div class="file-loader" id="modelLoader">
-                        <input type="file" accept=".gab" onchange="loadModel(event)">
-                        <div class="icon">🧠</div>
-                        <div class="label">Model</div>
-                        <div class="hint">.gab file</div>
-                        <div class="filename" id="modelFilename"></div>
-                    </div>
-                </div>
-
-                <div class="mode-selector">
-                    <div class="mode-option active" data-mode="chat" onclick="selectMode('chat')">
-                        <div class="mode-label">Chat Mode</div>
-                        <div class="mode-hint">ChatML format with conversation history</div>
-                    </div>
-                    <div class="mode-option" data-mode="generate" onclick="selectMode('generate')">
-                        <div class="mode-label">Generate Mode</div>
-                        <div class="mode-hint">Raw text completion</div>
-                    </div>
-                </div>
-
-                <button class="start-btn" id="startBtn" disabled onclick="startChat()">Start Chatting</button>
-
-                <div class="error-message hidden" id="errorMessage"></div>
+            <div class="control-group">
+                <label>Max tokens:</label>
+                <input type="number" id="maxTokens" value="100" min="1" max="500" step="10">
             </div>
-
-            <!-- Chat Interface -->
-            <div class="chat-container" id="chatContainer">
-                <div class="chat-messages" id="chatMessages"></div>
-
-                <div class="chat-input-container">
-                    <div class="chat-input-wrapper">
-                        <textarea
-                            class="chat-input"
-                            id="chatInput"
-                            placeholder="Type your message..."
-                            rows="1"
-                            onkeydown="handleKeyDown(event)"
-                        ></textarea>
-                        <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
-                    </div>
+            <div class="divider"></div>
+            <div class="model-info">
+                <div class="status">
+                    <span class="status-dot" id="tokenizerStatus"></span>
+                    <span>Tokenizer</span>
+                </div>
+                <div class="status">
+                    <span class="status-dot" id="modelStatus"></span>
+                    <span>Model</span>
                 </div>
             </div>
-        </article>
-    </main>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Load Screen -->
+        <div class="load-screen" id="loadScreen">
+            <h2>Load Your Model</h2>
+            <p>Upload your trained tokenizer and model files to start chatting.</p>
+            
+            <div class="file-loaders">
+                <div class="file-loader" id="tokenizerLoader">
+                    <input type="file" accept=".bpe" onchange="loadTokenizer(event)">
+                    <div class="icon">📝</div>
+                    <div class="label">Tokenizer</div>
+                    <div class="hint">.bpe file</div>
+                    <div class="filename" id="tokenizerFilename"></div>
+                </div>
+                
+                <div class="file-loader" id="modelLoader">
+                    <input type="file" accept=".gab" onchange="loadModel(event)">
+                    <div class="icon">🧠</div>
+                    <div class="label">Model</div>
+                    <div class="hint">.gab file</div>
+                    <div class="filename" id="modelFilename"></div>
+                </div>
+            </div>
+
+            <div class="mode-selector">
+                <div class="mode-option active" data-mode="chat" onclick="selectMode('chat')">
+                    <div class="mode-label">Chat Mode</div>
+                    <div class="mode-hint">ChatML format with conversation history</div>
+                </div>
+                <div class="mode-option" data-mode="generate" onclick="selectMode('generate')">
+                    <div class="mode-label">Generate Mode</div>
+                    <div class="mode-hint">Raw text completion</div>
+                </div>
+            </div>
+
+            <button class="start-btn" id="startBtn" disabled onclick="startChat()">Start Chatting</button>
+            
+            <div class="error-message hidden" id="errorMessage"></div>
+        </div>
+
+        <!-- Chat Interface -->
+        <div class="chat-container" id="chatContainer">
+            <div class="chat-messages" id="chatMessages"></div>
+            
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <textarea 
+                        class="chat-input" 
+                        id="chatInput" 
+                        placeholder="Type your message..."
+                        rows="1"
+                        onkeydown="handleKeyDown(event)"
+                    ></textarea>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+                </div>
+                
+            </div>
+        </div>
+    </div>
 
     <script src="gab.js"></script>
     <script>
@@ -650,17 +533,17 @@
                 this.isGenerating = false;
                 this.conversationTokens = [];
                 this.mode = 'chat'; // 'chat' or 'generate'
-
+                
                 this.userTokenId = null;
                 this.assistantTokenId = null;
                 this.endTokenId = null;
-
+                
                 this.setupTextareaAutoResize();
             }
 
             setMode(mode) {
                 this.mode = mode;
-
+                
                 // Update UI
                 const options = document.querySelectorAll('.mode-option');
                 for (let i = 0; i < options.length; i++) {
@@ -696,11 +579,11 @@
                     try {
                         const bytes = new Uint8Array(e.target.result);
                         this.tokenizer = Tokenizer.deserialize(bytes);
-
+                        
                         document.getElementById('tokenizerLoader').classList.add('loaded');
                         document.getElementById('tokenizerStatus').classList.add('loaded');
                         document.getElementById('tokenizerFilename').textContent = file.name;
-
+                        
                         console.log('Tokenizer loaded, vocab size:', this.tokenizer.getVocabSize());
                         this.hideError();
                         this.checkReady();
@@ -717,12 +600,82 @@
                     try {
                         const bytes = new Uint8Array(e.target.result);
                         this.model = GabGPT.deserialize(bytes);
-
+                        
                         document.getElementById('modelLoader').classList.add('loaded');
                         document.getElementById('modelStatus').classList.add('loaded');
                         document.getElementById('modelFilename').textContent = file.name;
 
-                        console.log('Model loaded, vocab size:', this.model.vocabSize);
+                        // Log model hyperparameters
+                        const vocabSize = this.model.vocabSize;
+                        const embeddingDim = this.model.embedding.embeddingDim;
+                        const maxSeqLength = this.model.embedding.maxSequenceLength;
+                        const numBlocks = this.model.blocks.length;
+                        const numHeads = this.model.blocks[0].attention.numHeads;
+                        const headDim = embeddingDim / numHeads;
+                        const hiddenDim = embeddingDim * 4; // MLP expansion factor
+
+                        // Calculate total parameters
+                        let totalParams = 0;
+
+                        // Token embeddings: vocabSize * embeddingDim
+                        const tokenEmbParams = vocabSize * embeddingDim;
+                        totalParams += tokenEmbParams;
+
+                        // Position embeddings: maxSeqLength * embeddingDim
+                        const posEmbParams = maxSeqLength * embeddingDim;
+                        totalParams += posEmbParams;
+
+                        // Per transformer block
+                        let paramsPerBlock = 0;
+                        // LayerNorm1: gamma + beta
+                        paramsPerBlock += 2 * embeddingDim;
+                        // Attention: Q, K, V, O weights (4 * embeddingDim^2)
+                        paramsPerBlock += 4 * embeddingDim * embeddingDim;
+                        // LayerNorm2: gamma + beta
+                        paramsPerBlock += 2 * embeddingDim;
+                        // MLP Dense1: hiddenDim neurons * (embeddingDim weights + 1 bias)
+                        paramsPerBlock += hiddenDim * (embeddingDim + 1);
+                        // MLP Dense2: embeddingDim neurons * (hiddenDim weights + 1 bias)
+                        paramsPerBlock += embeddingDim * (hiddenDim + 1);
+
+                        totalParams += paramsPerBlock * numBlocks;
+
+                        // Final LayerNorm: gamma + beta
+                        totalParams += 2 * embeddingDim;
+
+                        // Output layer: weights (embeddingDim * vocabSize) + bias (vocabSize)
+                        totalParams += embeddingDim * vocabSize + vocabSize;
+
+                        // Format parameter count
+                        const formatParams = (n) => {
+                            if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+                            if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+                            if (n >= 1e3) return (n / 1e3).toFixed(2) + 'K';
+                            return n.toString();
+                        };
+
+                        console.log('%c📊 Model Loaded', 'font-size: 14px; font-weight: bold; color: #3fb950;');
+                        console.log('%c═══════════════════════════════════════', 'color: #30363d;');
+                        console.log('%cArchitecture:', 'font-weight: bold; color: #58a6ff;');
+                        console.log(`  Vocab Size:        ${vocabSize.toLocaleString()}`);
+                        console.log(`  Embedding Dim:     ${embeddingDim}`);
+                        console.log(`  Max Seq Length:    ${maxSeqLength}`);
+                        console.log(`  Transformer Blocks: ${numBlocks}`);
+                        console.log(`  Attention Heads:   ${numHeads}`);
+                        console.log(`  Head Dimension:    ${headDim}`);
+                        console.log(`  MLP Hidden Dim:    ${hiddenDim} (4x expansion)`);
+                        console.log('%c───────────────────────────────────────', 'color: #30363d;');
+                        console.log('%cParameter Count:', 'font-weight: bold; color: #58a6ff;');
+                        console.log(`  Token Embeddings:  ${formatParams(tokenEmbParams)} (${tokenEmbParams.toLocaleString()})`);
+                        console.log(`  Position Embeds:   ${formatParams(posEmbParams)} (${posEmbParams.toLocaleString()})`);
+                        console.log(`  Per Block:         ${formatParams(paramsPerBlock)} (${paramsPerBlock.toLocaleString()})`);
+                        console.log(`  All Blocks (${numBlocks}):    ${formatParams(paramsPerBlock * numBlocks)} (${(paramsPerBlock * numBlocks).toLocaleString()})`);
+                        console.log(`  Final LayerNorm:   ${formatParams(2 * embeddingDim)} (${(2 * embeddingDim).toLocaleString()})`);
+                        console.log(`  Output Layer:      ${formatParams(embeddingDim * vocabSize + vocabSize)} (${(embeddingDim * vocabSize + vocabSize).toLocaleString()})`);
+                        console.log('%c───────────────────────────────────────', 'color: #30363d;');
+                        console.log(`%c  TOTAL PARAMETERS:  ${formatParams(totalParams)} (${totalParams.toLocaleString()})`, 'font-weight: bold; color: #a371f7;');
+                        console.log('%c═══════════════════════════════════════', 'color: #30363d;');
+
                         this.hideError();
                         this.checkReady();
                     } catch (err) {
@@ -744,7 +697,7 @@
                         const userTokens = this.tokenizer.encode('<|user|>');
                         const assistantTokens = this.tokenizer.encode('<|assistant|>');
                         const endTokens = this.tokenizer.encode('<|end|>');
-
+                        
                         // Check if they're single tokens (reserved)
                         if (userTokens.length === 1) {
                             this.userTokenId = userTokens[0];
@@ -766,7 +719,7 @@
                 document.getElementById('loadScreen').classList.add('hidden');
                 document.getElementById('chatContainer').classList.add('active');
                 document.getElementById('chatInput').focus();
-
+                
                 // Update placeholder based on mode
                 const input = document.getElementById('chatInput');
                 if (this.mode === 'chat') {
@@ -778,20 +731,20 @@
 
             addMessage(role, content, isGenerating = false) {
                 const messagesEl = document.getElementById('chatMessages');
-
+                
                 const messageEl = document.createElement('div');
                 messageEl.className = 'message ' + role;
-
+                
                 const avatar = role === 'user' ? 'U' : 'G';
-
+                
                 messageEl.innerHTML = `
                     <div class="avatar">${avatar}</div>
                     <div class="content ${isGenerating ? 'generating' : ''}">${this.escapeHtml(content)}</div>
                 `;
-
+                
                 messagesEl.appendChild(messageEl);
                 messagesEl.scrollTop = messagesEl.scrollHeight;
-
+                
                 return messageEl;
             }
 
@@ -803,7 +756,7 @@
                 } else {
                     contentEl.classList.remove('generating');
                 }
-
+                
                 const messagesEl = document.getElementById('chatMessages');
                 messagesEl.scrollTop = messagesEl.scrollHeight;
             }
@@ -816,36 +769,36 @@
 
             async sendMessage() {
                 if (this.isGenerating) return;
-
+                
                 const input = document.getElementById('chatInput');
                 const message = input.value.trim();
                 if (!message) return;
-
+                
                 input.value = '';
                 input.style.height = 'auto';
-
+                
                 this.addMessage('user', message);
-
+                
                 if (this.mode === 'chat') {
                     // Chat mode: use ChatML format
                     const prompt = `<|user|>${message}<|end|><|assistant|>`;
                     const promptTokens = this.tokenizer.encode(prompt);
-
+                    
                     // Add to conversation history
                     this.conversationTokens = this.conversationTokens.concat(promptTokens);
-
+                    
                     // Trim conversation if too long
                     const maxContext = this.model.embedding.maxSequenceLength - 100;
                     if (this.conversationTokens.length > maxContext) {
                         this.conversationTokens = this.conversationTokens.slice(-maxContext);
                     }
-
+                    
                     await this.generate(true);
                 } else {
                     // Generate mode: raw text completion
                     const promptTokens = this.tokenizer.encode(message);
                     this.conversationTokens = promptTokens;
-
+                    
                     await this.generate(false);
                 }
             }
@@ -854,16 +807,16 @@
                 this.isGenerating = true;
                 document.getElementById('sendBtn').disabled = true;
                 document.getElementById('chatInput').disabled = true;
-
+                
                 const messageEl = this.addMessage('assistant', '', true);
-
+                
                 const temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
                 const maxTokens = parseInt(document.getElementById('maxTokens').value) || 100;
-
+                
                 let tokens = this.conversationTokens.slice();
                 let generated = [];
                 let responseText = '';
-
+                
                 try {
                     for (let i = 0; i < maxTokens; i++) {
                         // Truncate if exceeding max sequence length
@@ -872,40 +825,40 @@
                         if (tokens.length > maxSeqLen) {
                             inputTokens = tokens.slice(-maxSeqLen);
                         }
-
+                        
                         // Forward pass
                         const batchedInput = [inputTokens];
                         const probs = this.model.forward(batchedInput);
                         const lastProbs = probs[0][inputTokens.length - 1];
-
+                        
                         // Sample with temperature
                         const nextToken = this.sampleWithTemperature(lastProbs, temperature);
-
+                        
                         // Check for end token (only in chat mode)
                         if (isChatMode && this.endTokenId !== null && nextToken === this.endTokenId) {
                             break;
                         }
-
+                        
                         tokens.push(nextToken);
                         generated.push(nextToken);
-
+                        
                         // Decode and update display
                         responseText = this.tokenizer.decode(generated);
-
+                        
                         // Remove special tokens from display (only in chat mode)
                         if (isChatMode) {
                             responseText = responseText.replace(/<\|end\|>/g, '').replace(/<\|user\|>/g, '').replace(/<\|assistant\|>/g, '');
                         }
-
+                        
                         this.updateMessage(messageEl, responseText, true);
-
+                        
                         // Yield to UI
                         await new Promise(resolve => setTimeout(resolve, 0));
                     }
-
+                    
                     // Final update
                     this.updateMessage(messageEl, responseText || '(empty response)', false);
-
+                    
                     // Update conversation history
                     if (isChatMode) {
                         this.conversationTokens = tokens;
@@ -914,12 +867,12 @@
                         }
                     }
                     // In generate mode, don't accumulate history
-
+                    
                 } catch (err) {
                     console.error('Generation error:', err);
                     this.updateMessage(messageEl, 'Error: ' + err.message, false);
                 }
-
+                
                 this.isGenerating = false;
                 document.getElementById('sendBtn').disabled = false;
                 document.getElementById('chatInput').disabled = false;
@@ -932,13 +885,13 @@
                 for (let i = 0; i < probs.length; i++) {
                     logits.push(Math.log(probs[i] + 1e-10));
                 }
-
+                
                 // Apply temperature
                 const scaledLogits = [];
                 for (let i = 0; i < logits.length; i++) {
                     scaledLogits.push(logits[i] / temperature);
                 }
-
+                
                 // Softmax
                 let maxLogit = scaledLogits[0];
                 for (let i = 1; i < scaledLogits.length; i++) {
@@ -946,7 +899,7 @@
                         maxLogit = scaledLogits[i];
                     }
                 }
-
+                
                 const expLogits = [];
                 let sum = 0;
                 for (let i = 0; i < scaledLogits.length; i++) {
@@ -954,12 +907,12 @@
                     expLogits.push(exp);
                     sum += exp;
                 }
-
+                
                 const scaledProbs = [];
                 for (let i = 0; i < expLogits.length; i++) {
                     scaledProbs.push(expLogits[i] / sum);
                 }
-
+                
                 // Sample
                 const random = Math.random();
                 let cumulative = 0;
@@ -969,7 +922,7 @@
                         return i;
                     }
                 }
-
+                
                 return scaledProbs.length - 1;
             }
 

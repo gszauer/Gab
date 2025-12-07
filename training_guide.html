@@ -522,17 +522,17 @@
                     <tr>
                         <td>Learning Rate</td>
                         <td>Speed of learning</td>
-                        <td>0.0001 - 0.001</td>
+                        <td>0.0001 - 0.001 (ignored if adam is on)</td>
                     </tr>
                     <tr>
                         <td>Warmup Ratio</td>
                         <td>Gentle start to training</td>
-                        <td>0.05 - 0.2</td>
+                        <td>0.05 - 0.2 (ignored if adam is on)</td>
                     </tr>
                     <tr>
                         <td>Use Adam Optimizer</td>
-                        <td>Smart adaptive learning</td>
-                        <td>On/Off. Ignores Learning Rate &amp; warmup if on</td>
+                        <td>Speeds up training</td>
+                        <td>On/Off. Always keep on <br />Ignores Learning Rate &amp; warmup if on</td>
                     </tr>
                 </tbody>
             </table>
@@ -1106,7 +1106,7 @@ Learning rate just right:
                 When Adam is enabled, Learning Rate and Warmup Ratio are ignored&mdash;Adam figures out the right values after just a few hundred examples.
             </p>
 
-            <p><strong>Recommended:</strong> Use Adam. Disable only for a more artisanal experience.</p>
+            <p><strong>Recommended:</strong> Use Adam, it speeds up training a lot, there is no reason to disable it.</p>
 
             <hr>
 

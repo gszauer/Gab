@@ -497,7 +497,7 @@
       // Model state
       let tokenizer = null;
       let model = null;
-      let chatLog = ''; // Raw string chat log following Gab format
+      let conversationLog = ''; // Raw string chat log following Gab format
       let endTokenId = null;
       let userTokenId = null;
       let assistantTokenId = null;
@@ -779,11 +779,11 @@
 
         // Prepare the chat log following Gab format rules
         let preparedLog;
-        if (chatLog === '') {
+        if (conversationLog === '') {
           // First message - just user + assistant suffix
           preparedLog = '<|user|>' + userText + '<|assistant|>';
         } else {
-          preparedLog = prepareChatLogForGeneration(chatLog, userText);
+          preparedLog = prepareChatLogForGeneration(conversationLog, userText);
         }
 
         // Tokenize
@@ -843,10 +843,10 @@
           // Post-generation: update chat log
           // Format: previous log + user message + assistant response + <|end|>
           // Then append <|user|> to prepare for next message
-          if (chatLog === '') {
-            chatLog = '<|user|>' + userText + '<|assistant|>' + tokenizer.decode(generated) + '<|end|><|user|>';
+          if (conversationLog === '') {
+            conversationLog = '<|user|>' + userText + '<|assistant|>' + tokenizer.decode(generated) + '<|end|><|user|>';
           } else {
-            chatLog = removeTrailingSpecialTokens(chatLog) + '<|user|>' + userText + '<|assistant|>' + tokenizer.decode(generated) + '<|end|><|user|>';
+            conversationLog = removeTrailingSpecialTokens(conversationLog) + '<|user|>' + userText + '<|assistant|>' + tokenizer.decode(generated) + '<|end|><|user|>';
           }
 
         } catch (err) {
@@ -875,7 +875,7 @@
       clearBtn.addEventListener('click', ()=>{
         if(state.typing) return;
         state.messages = [];
-        chatLog = '';
+        conversationLog = '';
         renderChat();
       });
 

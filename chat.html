@@ -650,14 +650,71 @@
                 this.tokenizer = null;
                 this.model = null;
                 this.isGenerating = false;
-                this.conversationTokens = [];
+                this.chatLog = ''; // String-based chat log following Gab format
                 this.mode = 'chat'; // 'chat' or 'generate'
 
                 this.userTokenId = null;
                 this.assistantTokenId = null;
                 this.endTokenId = null;
+                this.thinkTokenId = null;
 
                 this.setupTextareaAutoResize();
+            }
+
+            // Helper: Remove trailing special tokens from string
+            removeTrailingSpecialTokens(str) {
+                const tokens = ['<|end|>', '<|user|>', '<|assistant|>', '<|think|>'];
+                let changed = true;
+                while (changed) {
+                    changed = false;
+                    for (const tok of tokens) {
+                        if (str.endsWith(tok)) {
+                            str = str.slice(0, -tok.length);
+                            changed = true;
+                        }
+                    }
+                }
+                return str;
+            }
+
+            // Helper: Remove leading think/assistant/end tokens (sanitize)
+            sanitizeLeadingTokens(str) {
+                const tokens = ['<|think|>', '<|assistant|>', '<|end|>'];
+                let changed = true;
+                while (changed) {
+                    changed = false;
+                    for (const tok of tokens) {
+                        if (str.startsWith(tok)) {
+                            str = str.slice(tok.length);
+                            changed = true;
+                        }
+                    }
+                }
+                return str;
+            }
+
+            // Helper: Strip all special tokens for display
+            stripSpecialTokens(str) {
+                return str.replace(/<\|(end|user|assistant|think)\|>/g, '');
+            }
+
+            // Prepare chat log for generation per Gab format rules
+            prepareChatLogForGeneration(log, userMessage) {
+                // Step 1: Sanitize - remove leading think/assistant/end tokens
+                log = this.sanitizeLeadingTokens(log);
+
+                // Step 2: Ensure user prefix
+                if (!log.startsWith('<|user|>')) {
+                    log = '<|user|>' + log;
+                }
+
+                // Step 3: Remove trailing special tokens
+                log = this.removeTrailingSpecialTokens(log);
+
+                // Step 4: Append new user message and suffix (always assistant, no think mode)
+                log = log + '<|user|>' + userMessage + '<|assistant|>';
+
+                return log;
             }
 
             setMode(mode) {
@@ -742,27 +799,20 @@
             startChat() {
                 // Try to find special tokens (only needed for chat mode)
                 if (this.mode === 'chat') {
-                    try {
-                        const userTokens = this.tokenizer.encode('<|user|>');
-                        const assistantTokens = this.tokenizer.encode('<|assistant|>');
-                        const endTokens = this.tokenizer.encode('<|end|>');
-
-                        // Check if they're single tokens (reserved)
-                        if (userTokens.length === 1) {
-                            this.userTokenId = userTokens[0];
-                            console.log('Found <|user|> token:', this.userTokenId);
+                    const specialTokens = ['<|end|>', '<|user|>', '<|assistant|>', '<|think|>'];
+                    const tokenIds = [null, null, null, null];
+                    for (let i = 0; i < specialTokens.length; i++) {
+                        try {
+                            const encoded = this.tokenizer.encode(specialTokens[i]);
+                            if (encoded.length === 1) {
+                                tokenIds[i] = encoded[0];
+                                console.log('Found ' + specialTokens[i] + ' token:', tokenIds[i]);
+                            }
+                        } catch (e) {
+                            console.log(specialTokens[i] + ' token not found');
                         }
-                        if (assistantTokens.length === 1) {
-                            this.assistantTokenId = assistantTokens[0];
-                            console.log('Found <|assistant|> token:', this.assistantTokenId);
-                        }
-                        if (endTokens.length === 1) {
-                            this.endTokenId = endTokens[0];
-                            console.log('Found <|end|> token:', this.endTokenId);
-                        }
-                    } catch (err) {
-                        console.log('Special tokens not found, will use raw encoding');
                     }
+                    [this.endTokenId, this.userTokenId, this.assistantTokenId, this.thinkTokenId] = tokenIds;
                 }
 
                 document.getElementById('loadScreen').classList.add('hidden');
@@ -829,30 +879,15 @@
                 this.addMessage('user', message);
 
                 if (this.mode === 'chat') {
-                    // Chat mode: use ChatML format
-                    const prompt = `<|user|>${message}<|end|><|assistant|>`;
-                    const promptTokens = this.tokenizer.encode(prompt);
-
-                    // Add to conversation history
-                    this.conversationTokens = this.conversationTokens.concat(promptTokens);
-
-                    // Trim conversation if too long
-                    const maxContext = this.model.embedding.maxSequenceLength - 100;
-                    if (this.conversationTokens.length > maxContext) {
-                        this.conversationTokens = this.conversationTokens.slice(-maxContext);
-                    }
-
-                    await this.generate(true);
+                    // Chat mode: use Gab format
+                    await this.generate(true, message);
                 } else {
                     // Generate mode: raw text completion
-                    const promptTokens = this.tokenizer.encode(message);
-                    this.conversationTokens = promptTokens;
-
-                    await this.generate(false);
+                    await this.generate(false, message);
                 }
             }
 
-            async generate(isChatMode) {
+            async generate(isChatMode, userMessage) {
                 this.isGenerating = true;
                 document.getElementById('sendBtn').disabled = true;
                 document.getElementById('chatInput').disabled = true;
@@ -862,7 +897,28 @@
                 const temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
                 const maxTokens = parseInt(document.getElementById('maxTokens').value) || 100;
 
-                let tokens = this.conversationTokens.slice();
+                let tokens;
+                if (isChatMode) {
+                    // Prepare chat log following Gab format rules
+                    let preparedLog;
+                    if (this.chatLog === '') {
+                        // First message - just user + assistant suffix
+                        preparedLog = '<|user|>' + userMessage + '<|assistant|>';
+                    } else {
+                        preparedLog = this.prepareChatLogForGeneration(this.chatLog, userMessage);
+                    }
+                    tokens = this.tokenizer.encode(preparedLog);
+
+                    // Trim from beginning if too long (preserve recent context)
+                    const maxContext = this.model.embedding.maxSequenceLength - 100;
+                    if (tokens.length > maxContext) {
+                        tokens = tokens.slice(-maxContext);
+                    }
+                } else {
+                    // Generate mode: raw text completion
+                    tokens = this.tokenizer.encode(userMessage);
+                }
+
                 let generated = [];
                 let responseText = '';
 
@@ -896,7 +952,7 @@
 
                         // Remove special tokens from display (only in chat mode)
                         if (isChatMode) {
-                            responseText = responseText.replace(/<\|end\|>/g, '').replace(/<\|user\|>/g, '').replace(/<\|assistant\|>/g, '');
+                            responseText = this.stripSpecialTokens(responseText);
                         }
 
                         this.updateMessage(messageEl, responseText, true);
@@ -908,11 +964,15 @@
                     // Final update
                     this.updateMessage(messageEl, responseText || '(empty response)', false);
 
-                    // Update conversation history
+                    // Update chat log (only in chat mode)
                     if (isChatMode) {
-                        this.conversationTokens = tokens;
-                        if (this.endTokenId !== null) {
-                            this.conversationTokens.push(this.endTokenId);
+                        // Post-generation: update chat log
+                        // Format: previous log + user message + assistant response + <|end|>
+                        // Then append <|user|> to prepare for next message
+                        if (this.chatLog === '') {
+                            this.chatLog = '<|user|>' + userMessage + '<|assistant|>' + this.tokenizer.decode(generated) + '<|end|><|user|>';
+                        } else {
+                            this.chatLog = this.removeTrailingSpecialTokens(this.chatLog) + '<|user|>' + userMessage + '<|assistant|>' + this.tokenizer.decode(generated) + '<|end|><|user|>';
                         }
                     }
                     // In generate mode, don't accumulate history
@@ -977,7 +1037,7 @@
 
             clearChat() {
                 document.getElementById('chatMessages').innerHTML = '';
-                this.conversationTokens = [];
+                this.chatLog = '';
             }
         }
 

@@ -497,8 +497,11 @@
       // Model state
       let tokenizer = null;
       let model = null;
-      let conversationTokens = [];
+      let chatLog = ''; // Raw string chat log following Gab format
       let endTokenId = null;
+      let userTokenId = null;
+      let assistantTokenId = null;
+      let thinkTokenId = null;
 
       const state = {
         modelLoaded: false,
@@ -590,15 +593,20 @@
           tokenizer = Tokenizer.deserialize(new Uint8Array(tokenizerBuffer));
           model = GabGPT.deserialize(new Uint8Array(modelBuffer));
 
-          // Find end token
-          try {
-            const endTokens = tokenizer.encode('<|end|>');
-            if (endTokens.length === 1) {
-              endTokenId = endTokens[0];
+          // Find special tokens
+          const specialTokens = ['<|end|>', '<|user|>', '<|assistant|>', '<|think|>'];
+          const tokenIds = [null, null, null, null];
+          for (let i = 0; i < specialTokens.length; i++) {
+            try {
+              const encoded = tokenizer.encode(specialTokens[i]);
+              if (encoded.length === 1) {
+                tokenIds[i] = encoded[0];
+              }
+            } catch (e) {
+              console.log(specialTokens[i] + ' token not found');
             }
-          } catch (e) {
-            console.log('End token not found');
           }
+          [endTokenId, userTokenId, assistantTokenId, thinkTokenId] = tokenIds;
 
           console.log('Model loaded! Vocab size:', model.vocabSize);
 
@@ -700,6 +708,62 @@
         respond(text);
       }
 
+      // Helper: Remove trailing special tokens from string
+      function removeTrailingSpecialTokens(str) {
+        const tokens = ['<|end|>', '<|user|>', '<|assistant|>', '<|think|>'];
+        let changed = true;
+        while (changed) {
+          changed = false;
+          for (const tok of tokens) {
+            if (str.endsWith(tok)) {
+              str = str.slice(0, -tok.length);
+              changed = true;
+            }
+          }
+        }
+        return str;
+      }
+
+      // Helper: Remove leading think/assistant/end tokens (sanitize)
+      function sanitizeLeadingTokens(str) {
+        const tokens = ['<|think|>', '<|assistant|>', '<|end|>'];
+        let changed = true;
+        while (changed) {
+          changed = false;
+          for (const tok of tokens) {
+            if (str.startsWith(tok)) {
+              str = str.slice(tok.length);
+              changed = true;
+            }
+          }
+        }
+        return str;
+      }
+
+      // Helper: Strip all special tokens for display
+      function stripSpecialTokens(str) {
+        return str.replace(/<\|(end|user|assistant|think)\|>/g, '');
+      }
+
+      // Prepare chat log for generation per Gab format rules
+      function prepareChatLogForGeneration(log, userMessage) {
+        // Step 1: Sanitize - remove leading think/assistant/end tokens
+        log = sanitizeLeadingTokens(log);
+
+        // Step 2: Ensure user prefix
+        if (!log.startsWith('<|user|>')) {
+          log = '<|user|>' + log;
+        }
+
+        // Step 3: Remove trailing special tokens
+        log = removeTrailingSpecialTokens(log);
+
+        // Step 4: Append new user message and suffix (always assistant, no think mode)
+        log = log + '<|user|>' + userMessage + '<|assistant|>';
+
+        return log;
+      }
+
       async function respond(userText){
         state.typing = true;
         sendBtn.disabled = true;
@@ -708,27 +772,32 @@
         // Add thinking indicator and get reference to the bubble element
         state.messages.push({role:'assistant', text:'▌'});
         const msgEl = messageEl(state.messages[state.messages.length - 1]);
-        chatLog.appendChild(msgEl);
-        chatLog.scrollTop = chatLog.scrollHeight;
+        const chatLogEl = byId('chatLog');
+        chatLogEl.appendChild(msgEl);
+        chatLogEl.scrollTop = chatLogEl.scrollHeight;
         const bubbleEl = msgEl.querySelector('.bubble');
 
-        // Build prompt in ChatML format
-        const prompt = `<|user|>${userText}<|end|><|assistant|>`;
-        const promptTokens = tokenizer.encode(prompt);
+        // Prepare the chat log following Gab format rules
+        let preparedLog;
+        if (chatLog === '') {
+          // First message - just user + assistant suffix
+          preparedLog = '<|user|>' + userText + '<|assistant|>';
+        } else {
+          preparedLog = prepareChatLogForGeneration(chatLog, userText);
+        }
 
-        // Add to conversation history
-        conversationTokens = conversationTokens.concat(promptTokens);
+        // Tokenize
+        let tokens = tokenizer.encode(preparedLog);
 
-        // Trim if too long
+        // Trim from beginning if too long (preserve recent context)
         const maxContext = model.embedding.maxSequenceLength - 100;
-        if (conversationTokens.length > maxContext) {
-          conversationTokens = conversationTokens.slice(-maxContext);
+        if (tokens.length > maxContext) {
+          tokens = tokens.slice(-maxContext);
         }
 
         const temperature = parseFloat(byId('temperature').value) || 0.7;
         const maxTokens = parseInt(byId('maxTokens').value) || 128;
 
-        let tokens = conversationTokens.slice();
         let generated = [];
         let responseText = '';
 
@@ -746,7 +815,7 @@
 
             const nextToken = sampleWithTemperature(lastProbs, temperature);
 
-            // Check for end token
+            // Check for end token - stop generation
             if (endTokenId !== null && nextToken === endTokenId) {
               break;
             }
@@ -754,27 +823,30 @@
             tokens.push(nextToken);
             generated.push(nextToken);
 
-            // Decode and update display
-            responseText = tokenizer.decode(generated);
-            responseText = responseText.replace(/<\|end\|>/g, '').replace(/<\|user\|>/g, '').replace(/<\|assistant\|>/g, '');
+            // Decode and update display (strip special tokens for display)
+            responseText = stripSpecialTokens(tokenizer.decode(generated));
 
             // Update just the bubble text (no re-render)
             state.messages[state.messages.length - 1].text = responseText + '▌';
             bubbleEl.textContent = responseText + '▌';
-            chatLog.scrollTop = chatLog.scrollHeight;
+            chatLogEl.scrollTop = chatLogEl.scrollHeight;
 
             // Yield to UI
             await new Promise(resolve => setTimeout(resolve, 0));
           }
 
           // Final update (remove cursor)
-          state.messages[state.messages.length - 1].text = responseText || '(empty response)';
-          bubbleEl.textContent = responseText || '(empty response)';
+          const finalText = responseText || '(empty response)';
+          state.messages[state.messages.length - 1].text = finalText;
+          bubbleEl.textContent = finalText;
 
-          // Update conversation history
-          conversationTokens = tokens;
-          if (endTokenId !== null) {
-            conversationTokens.push(endTokenId);
+          // Post-generation: update chat log
+          // Format: previous log + user message + assistant response + <|end|>
+          // Then append <|user|> to prepare for next message
+          if (chatLog === '') {
+            chatLog = '<|user|>' + userText + '<|assistant|>' + tokenizer.decode(generated) + '<|end|><|user|>';
+          } else {
+            chatLog = removeTrailingSpecialTokens(chatLog) + '<|user|>' + userText + '<|assistant|>' + tokenizer.decode(generated) + '<|end|><|user|>';
           }
 
         } catch (err) {
@@ -803,7 +875,7 @@
       clearBtn.addEventListener('click', ()=>{
         if(state.typing) return;
         state.messages = [];
-        conversationTokens = [];
+        chatLog = '';
         renderChat();
       });
 

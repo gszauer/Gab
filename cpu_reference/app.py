@@ -1,5 +1,8 @@
 """
 GabGPT - Minimal LLM Training with Gradio UI
+Ported from JavaScript to Python/NumPy for HuggingFace Spaces
+
+Memory-efficient implementation with streaming data support.
 """
 
 import numpy as np

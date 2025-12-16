@@ -529,8 +529,8 @@ class GabGPT(nn.Module):
 
         model.load_state_dict(checkpoint['model_state_dict'])
 
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        # Fresh optimizer for SFT (don't load state from pre-training)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
         return model, optimizer, checkpoint['step'], checkpoint.get('loss', 0.0)
 

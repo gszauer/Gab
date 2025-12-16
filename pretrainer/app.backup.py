@@ -480,7 +480,6 @@ def stream_dataset_chunks(dataset_name: str, split: str, text_column: str,
                           chunk_size_bytes: int = CHUNK_SIZE_BYTES,
                           skip_samples: int = 0,
                           start_chunk_num: int = 1,
-                          output_path: Path = DATASET_FILE,
                           log_fn=None):
     """
     Stream dataset in chunks of approximately chunk_size_bytes.
@@ -490,9 +489,8 @@ def stream_dataset_chunks(dataset_name: str, split: str, text_column: str,
         skip_samples: Number of samples to skip using HuggingFace .skip() method.
                       This avoids loading skipped samples into memory.
         start_chunk_num: What chunk number to start counting from (for logging).
-        output_path: Where to write the null-delimited chunk for each yield.
 
-    Yields: (chunk_file_path, chunk_samples, chunk_bytes, total_bytes_so_far)
+    Yields: (chunk_texts, chunk_samples, chunk_bytes, total_bytes_so_far)
     """
     if log_fn:
         log_fn(f"Connecting to HuggingFace dataset: {dataset_name}...")
@@ -511,56 +509,23 @@ def stream_dataset_chunks(dataset_name: str, split: str, text_column: str,
     if log_fn:
         log_fn(f"Dataset connected, starting to stream...")
 
-    buffer_size = chunk_size_bytes
-    chunk_buffer = bytearray(buffer_size)
-    buffer_view = memoryview(chunk_buffer)
-
+    chunk_texts = []
     chunk_bytes = 0
     total_bytes = 0
     total_samples = 0
-    chunk_samples = 0
     chunk_num = start_chunk_num - 1  # Will be incremented before yield
     last_progress_mb = 0
-
-    def flush_chunk(current_chunk_num: int, bytes_in_chunk: int, samples_in_chunk: int, bytes_total: int):
-        # Write current buffer to disk and yield metadata
-        with open(output_path, 'wb') as f:
-            f.write(buffer_view[:bytes_in_chunk])
-        if log_fn:
-            log_fn(f"Chunk written to temp file: {bytes_in_chunk / (1024**3):.2f} GB")
-        return (str(output_path), samples_in_chunk, bytes_in_chunk, bytes_total)
 
     for sample in dataset:
         text = sample.get(text_column, "")
         if not text:
             continue
 
-        encoded = text.encode('utf-8')
-        bytes_needed = len(encoded) + 1  # +1 for null terminator
-
-        # If sample alone exceeds buffer, skip with warning
-        if bytes_needed > buffer_size:
-            if log_fn:
-                log_fn(f"Warning: Sample size {bytes_needed / (1024**2):.2f} MB exceeds chunk buffer; skipping sample")
-            continue
-
-        # If adding this sample would overflow the buffer, flush current chunk first
-        if chunk_bytes + bytes_needed > buffer_size and chunk_bytes > 0:
-            chunk_num += 1
-            if log_fn:
-                log_fn(f"Chunk {chunk_num} ready: {chunk_samples:,} samples, {chunk_bytes / (1024**3):.2f} GB")
-            yield flush_chunk(chunk_num, chunk_bytes, chunk_samples, total_bytes)
-            chunk_bytes = 0
-            chunk_samples = 0
-            last_progress_mb = 0
-
-        # Append encoded text and null terminator to buffer
-        buffer_view[chunk_bytes:chunk_bytes + len(encoded)] = encoded
-        buffer_view[chunk_bytes + len(encoded)] = 0
-        chunk_bytes += bytes_needed
-        chunk_samples += 1
+        text_bytes = len(text.encode('utf-8'))
+        chunk_texts.append(text)
+        chunk_bytes += text_bytes
+        total_bytes += text_bytes
         total_samples += 1
-        total_bytes += len(encoded)
 
         # Log progress every 250MB while accumulating chunk
         current_mb = chunk_bytes // (250 * 1024 * 1024)
@@ -569,12 +534,23 @@ def stream_dataset_chunks(dataset_name: str, split: str, text_column: str,
             if log_fn:
                 log_fn(f"Accumulating chunk: {chunk_bytes / (1024**3):.2f}/{chunk_size_bytes / (1024**3):.1f} GB ({total_samples + skip_samples:,} samples)")
 
+        if chunk_bytes >= chunk_size_bytes:
+            chunk_num += 1
+            if log_fn:
+                log_fn(f"Chunk {chunk_num} ready: {len(chunk_texts):,} samples, {chunk_bytes / (1024**3):.2f} GB")
+
+            yield (chunk_texts, len(chunk_texts), chunk_bytes, total_bytes)
+
+            chunk_texts = []
+            chunk_bytes = 0
+            last_progress_mb = 0
+
     # Final partial chunk
-    if chunk_bytes > 0:
+    if chunk_texts:
         chunk_num += 1
         if log_fn:
-            log_fn(f"Final chunk {chunk_num}: {chunk_samples:,} samples, {chunk_bytes / (1024**3):.2f} GB")
-        yield flush_chunk(chunk_num, chunk_bytes, chunk_samples, total_bytes)
+            log_fn(f"Final chunk {chunk_num}: {len(chunk_texts):,} samples, {chunk_bytes / (1024**3):.2f} GB")
+        yield (chunk_texts, len(chunk_texts), chunk_bytes, total_bytes)
 
 
 def write_chunk_to_file(texts: list, output_path: str) -> Tuple[int, int]:
@@ -911,9 +887,12 @@ def export_checkpoint() -> Optional[str]:
             state.current_loss,
             epoch=state.current_epoch,
             total_steps=state.total_steps,
+            # Chunk resumption data
+            chunks_completed=state.chunks_completed,
+            samples_seen=state.samples_seen,
         )
         log(f"Checkpoint exported: {filepath}", "INFO")
-        log(f"  Chunks completed: {state.chunks_completed}", "INFO")
+        log(f"  Chunks completed: {state.chunks_completed}, Samples seen: {state.samples_seen:,}", "INFO")
         return str(filepath)
     except Exception as e:
         log(f"Failed to export checkpoint: {e}", "ERROR")
@@ -944,7 +923,7 @@ def import_checkpoint(file) -> Tuple[str, dict]:
         state.model.load_state_dict(checkpoint['model_state_dict'])
 
         # Create optimizer and load state
-        state.optimizer = torch.optim.AdamW(state.model.parameters())
+        state.optimizer = torch.optim.Adam(state.model.parameters())
         state.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
         # Reset training state - step/epoch don't carry over since we're likely
@@ -954,9 +933,9 @@ def import_checkpoint(file) -> Tuple[str, dict]:
         state.total_steps = 0
         state.current_loss = checkpoint.get('loss', 0.0)  # Keep for reference
 
-        # Reset chunk progress; manual sample skip is provided via UI
-        state.chunks_completed = 0
-        state.samples_seen = 0
+        # Restore chunk resumption data - this IS needed for proper skip
+        state.chunks_completed = checkpoint.get('chunks_completed', 0)
+        state.samples_seen = checkpoint.get('samples_seen', 0)
 
         # Lock config
         state.loaded_config = config
@@ -969,6 +948,7 @@ def import_checkpoint(file) -> Tuple[str, dict]:
         log(f"  Num blocks: {config['num_blocks']}", "INFO")
         log(f"  Max seq length: {config['max_seq_length']}", "INFO")
         log(f"  Chunks completed: {state.chunks_completed}", "INFO")
+        log(f"  Samples seen: {state.samples_seen:,}", "INFO")
 
         return "Checkpoint loaded! Config locked.", config
 
@@ -1020,7 +1000,6 @@ def training_worker(
     dataset_split: str,
     text_column: str,
     max_samples: int,
-    start_from_sample: int,
     # Model config
     vocab_size: int,
     embedding_dim: int,
@@ -1032,9 +1011,9 @@ def training_worker(
     batch_size: int,
     seq_length: int,
     learning_rate: float,
-    weight_decay: float,
     warmup_ratio: float,
     log_every: int,
+    start_from_chunk: int = 1,
 ):
     """
     Training worker that runs in a background thread.
@@ -1119,15 +1098,12 @@ def training_worker(
         state.status = "Preparing optimizer..."
 
         if state.optimizer is None:
-            state.optimizer = torch.optim.AdamW(
-                state.model.parameters(), lr=learning_rate, weight_decay=weight_decay
-            )
-            log(f"Created AdamW optimizer (lr={learning_rate}, wd={weight_decay})", "INFO")
+            state.optimizer = torch.optim.Adam(state.model.parameters(), lr=learning_rate)
+            log(f"Created Adam optimizer (lr={learning_rate})", "INFO")
         else:
             for param_group in state.optimizer.param_groups:
                 param_group['lr'] = learning_rate
-                param_group['weight_decay'] = weight_decay
-            log(f"Using optimizer from checkpoint, updated lr={learning_rate}, wd={weight_decay}", "INFO")
+            log(f"Using optimizer from checkpoint, updated lr={learning_rate}", "INFO")
 
         log(f"Device: {state.device}", "INFO")
         log(f"Attention backend: {get_attention_backend()}", "INFO")
@@ -1144,13 +1120,22 @@ def training_worker(
         warmup_steps = 1000  # Initial estimate, gets refined
 
         log("Starting chunked streaming...", "INFO")
+        start_from_chunk = int(start_from_chunk) if start_from_chunk else 1
 
-        # Manual sample skip (start_from_sample input)
-        skip_samples = int(start_from_sample) if start_from_sample else 0
-        state.samples_seen = skip_samples
-        state.chunks_completed = 0
-        if skip_samples > 0:
-            log(f"Starting from sample {skip_samples:,} via skip()", "INFO")
+        # Calculate samples to skip using HuggingFace .skip() method
+        # This avoids loading skipped data into memory (fixes memory leak on resume)
+        skip_samples = 0
+        if start_from_chunk > 1:
+            if state.samples_seen > 0:
+                # We have checkpoint data - use it for efficient skip
+                skip_samples = state.samples_seen
+                log(f"Resuming from chunk {start_from_chunk} (skipping {skip_samples:,} samples from checkpoint)", "INFO")
+            else:
+                # No checkpoint data - warn user
+                log(f"WARNING: No checkpoint loaded! Cannot efficiently skip to chunk {start_from_chunk}.", "WARNING")
+                log(f"Please load a checkpoint first, or start from chunk 1.", "WARNING")
+                log(f"Starting from chunk 1 instead.", "WARNING")
+                start_from_chunk = 1
 
         log(f"Memory before streaming: {get_detailed_memory_stats()}", "INFO")
         state.status = "Streaming..."
@@ -1159,36 +1144,40 @@ def training_worker(
             dataset_name, dataset_split, text_column,
             chunk_size_bytes=CHUNK_SIZE_BYTES,
             skip_samples=skip_samples,
-            start_chunk_num=1,
-            output_path=DATASET_FILE,
+            start_chunk_num=start_from_chunk,
             log_fn=lambda m: log(m, "INFO")
         )
 
-        for chunk_idx, (chunk_file_path, chunk_samples, chunk_bytes, total_bytes_so_far) in enumerate(chunk_generator):
+        for chunk_idx, (chunk_texts, chunk_samples, chunk_bytes, total_bytes_so_far) in enumerate(chunk_generator):
             # Check if we should stop
             if not state.is_training:
                 log("Training stopped by user", "WARNING")
                 return
 
-            # Chunk numbering starts at 1 regardless of skip
-            actual_chunk_num = 1 + chunk_idx
+            # Chunk numbering now starts from start_from_chunk
+            actual_chunk_num = start_from_chunk + chunk_idx
 
             log(f"{'='*60}", "INFO")
             log(f"CHUNK {actual_chunk_num} | {chunk_samples:,} samples | {chunk_bytes / (1024**3):.2f} GB", "INFO")
             log(f"Total streamed so far: {total_bytes_so_far / (1024**3):.2f} GB", "INFO")
             log(f"Memory at chunk start: {get_detailed_memory_stats()}", "INFO")
 
-            # Step 4a: Chunk file already written by stream generator
-            state.status = f"Chunk {actual_chunk_num} ready"
-            dataset_path = Path(chunk_file_path)
-            log(f"Chunk file ready: {chunk_bytes / (1024**3):.2f} GB at {dataset_path}", "INFO")
+            # Step 4a: Write chunk to temp file
+            state.status = f"Writing chunk {actual_chunk_num}..."
+
+            num_written, bytes_written = write_chunk_to_file(chunk_texts, str(DATASET_FILE))
+            log(f"Chunk written to temp file: {bytes_written / (1024**3):.2f} GB", "INFO")
+
+            # Free chunk texts from memory
+            del chunk_texts
+            gc.collect()
 
             # Step 4b: Encode chunk
             state.status = f"Encoding chunk {actual_chunk_num}..."
 
             success, output = run_encoder(
                 state.tokenizer_path,
-                str(dataset_path),
+                str(DATASET_FILE),
                 str(TOKENS_FILE),
                 log_fn=lambda m: log(m, "INFO")
             )
@@ -1210,8 +1199,8 @@ def training_worker(
             log(f"Chunk tokenized: {len(all_tokens):,} tokens ({len(all_tokens) / chunk_samples:.1f} avg per sample)", "INFO")
 
             # Clean up temp dataset file
-            if dataset_path.exists():
-                dataset_path.unlink()
+            if DATASET_FILE.exists():
+                DATASET_FILE.unlink()
 
             if len(all_tokens) < seq_length + 1:
                 log(f"WARNING: Chunk has too few tokens ({len(all_tokens)}), skipping", "WARNING")
@@ -1224,9 +1213,6 @@ def training_worker(
             batches_in_chunk = len(dataloader)
             state.total_steps = global_step + (batches_in_chunk * num_epochs)
             log(f"Dataloader: {batches_in_chunk} batches (batch={batch_size}, seq={seq_length})", "INFO")
-
-            # Update samples_seen now so UI shows progress immediately
-            state.samples_seen += chunk_samples
 
             # Update warmup estimate based on actual data
             if chunk_idx == 0:
@@ -1294,6 +1280,7 @@ def training_worker(
             log(f"CHUNK {actual_chunk_num} COMPLETE | Avg loss: {chunk_avg:.6f}", "INFO")
 
             state.chunks_completed = actual_chunk_num
+            state.samples_seen += chunk_samples
             state.bytes_seen += chunk_bytes
 
             log(f"Progress: {state.chunks_completed} chunks, {state.samples_seen:,} samples, {state.bytes_seen / (1024**3):.2f} GB", "INFO")
@@ -1446,11 +1433,8 @@ def get_training_status():
     else:
         step_str = "-"
 
-    sample_str = f"{state.samples_seen:,}" if state.samples_seen > 0 else "0"
-
     return (
         state.status,
-        sample_str,
         epoch_str,
         step_str,
         f"{state.current_loss:.6f}" if state.current_loss > 0 else "-",
@@ -1498,12 +1482,6 @@ def create_ui():
                         label="Max Samples (0 = all)",
                         value=0,
                         precision=0
-                    )
-                    start_from_sample = gr.Number(
-                        label="Start From Sample",
-                        value=0,
-                        precision=0,
-                        info="Skip this many samples before training"
                     )
 
                 # Tokenizer
@@ -1583,10 +1561,6 @@ def create_ui():
                             label="Learning Rate",
                             value=0.0003
                         )
-                        weight_decay = gr.Number(
-                            label="Weight Decay",
-                            value=0.01
-                        )
                     with gr.Row():
                         warmup_ratio = gr.Number(
                             label="Warmup Ratio",
@@ -1597,6 +1571,12 @@ def create_ui():
                             value=10,
                             precision=0
                         )
+                    start_from_chunk = gr.Number(
+                        label="Start From Chunk",
+                        value=1,
+                        precision=0,
+                        info="Skip to this chunk (1 = start from beginning)"
+                    )
 
             # ================================================================
             # RIGHT COLUMN: Training & Monitoring
@@ -1604,17 +1584,11 @@ def create_ui():
             with gr.Column(scale=1):
                 # Training Controls
                 with gr.Accordion("Training Controls", open=True):
-                    with gr.Row():
-                        status_display = gr.Textbox(
-                            label="Status",
-                            value="Idle",
-                            interactive=False
-                        )
-                        current_sample_display = gr.Textbox(
-                            label="Samples Processed",
-                            value="0",
-                            interactive=False
-                        )
+                    status_display = gr.Textbox(
+                        label="Status",
+                        value="Idle",
+                        interactive=False
+                    )
 
                     with gr.Row():
                         start_btn = gr.Button("Start Training", variant="primary")
@@ -1740,13 +1714,14 @@ def create_ui():
 
         # Training controls
         training_inputs = [
-            dataset_name, dataset_split, text_column, max_samples, start_from_sample,
+            dataset_name, dataset_split, text_column, max_samples,
             vocab_size, embedding_dim, num_heads, num_blocks, max_seq_length,
-            num_epochs, batch_size, seq_length, learning_rate, weight_decay, warmup_ratio, log_every
+            num_epochs, batch_size, seq_length, learning_rate, warmup_ratio, log_every,
+            start_from_chunk
         ]
 
         training_outputs = [
-            status_display, current_sample_display, epoch_display, step_display,
+            status_display, epoch_display, step_display,
             loss_display, avg_loss_display, log_display
         ]
 

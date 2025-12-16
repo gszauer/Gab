@@ -991,9 +991,8 @@ def import_checkpoint(file) -> Tuple[str, str]:
 
         state.model.load_state_dict(checkpoint['model_state_dict'])
 
-        # Create optimizer and load state
-        state.optimizer = torch.optim.Adam(state.model.parameters())
-        state.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        # Create fresh optimizer (don't load state - SFT starts fresh)
+        state.optimizer = torch.optim.AdamW(state.model.parameters())
 
         # Store config
         state.model_config = config

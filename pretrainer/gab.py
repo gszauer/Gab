@@ -5,6 +5,7 @@ A GPU-accelerated implementation compatible with the JavaScript version.
 Supports loading/saving .gab files for JS interop and .pt checkpoints for training.
 """
 
+import gc
 import math
 import struct
 import numpy as np
@@ -282,13 +283,17 @@ class GabGPT(nn.Module):
             offset += 4
 
         def write_tensor_1d(tensor: torch.Tensor):
-            for val in tensor.detach().cpu().numpy().flatten():
+            arr = tensor.detach().cpu().numpy().flatten()
+            for val in arr:
                 write_float(float(val))
+            del arr
 
         def write_tensor_2d(tensor: torch.Tensor):
-            for row in tensor.detach().cpu().numpy():
+            arr = tensor.detach().cpu().numpy()
+            for row in arr:
                 for val in row:
                     write_float(float(val))
+            del arr
 
         # Header
         struct.pack_into('<I', data, offset, 0x47414231)  # 'GAB1'
@@ -335,6 +340,7 @@ class GabGPT(nn.Module):
                 for w in dense1_weights[n]:
                     write_float(float(w))
                 write_float(float(dense1_bias[n]))
+            del dense1_weights, dense1_bias
 
             # mlp.dense2 - gab.js stores per-neuron (weights + bias)
             dense2_weights = block.mlp.dense2.weight.detach().cpu().numpy()  # [embed, hidden]
@@ -343,6 +349,7 @@ class GabGPT(nn.Module):
                 for w in dense2_weights[n]:
                     write_float(float(w))
                 write_float(float(dense2_bias[n]))
+            del dense2_weights, dense2_bias
 
         # finalNorm
         write_tensor_1d(self.final_norm.weight)
@@ -354,6 +361,10 @@ class GabGPT(nn.Module):
 
         with open(path, 'wb') as f:
             f.write(data)
+
+        # Explicit cleanup to prevent memory leak
+        del data
+        gc.collect()
 
     @staticmethod
     def load_gab(path: str, device: str = 'cpu') -> 'GabGPT':
@@ -480,7 +491,7 @@ class GabGPT(nn.Module):
 
     @staticmethod
     def load_checkpoint(path: str, device: str = 'cpu',
-                        learning_rate: float = 0.001) -> Tuple['GabGPT', torch.optim.Optimizer, int, float]:
+                        learning_rate: float = 0.001, weight_decay: float = 0.0) -> Tuple['GabGPT', torch.optim.Optimizer, int, float]:
         """
         Load full training checkpoint
 
@@ -500,7 +511,7 @@ class GabGPT(nn.Module):
 
         model.load_state_dict(checkpoint['model_state_dict'])
 
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
         return model, optimizer, checkpoint['step'], checkpoint.get('loss', 0.0)

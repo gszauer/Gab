@@ -791,7 +791,13 @@ After BPE:  [256, 257, 258]  // Merged frequent pairs into new tokens</code></pr
     const bytes = this.#stringToBytes(specialTokenString);
     let tokens = [...bytes]; // Copy the array
 
-    // Create merge chain to combine all bytes into a single token
+    // Apply all existing merges first to get the current token sequence
+    for (const [mergeKey, mergedToken] of this.merges) {
+        const [token1, token2] = mergeKey.split(',').map(Number);
+        tokens = this.#applyMerge(tokens, token1, token2, mergedToken);
+    }
+
+    // Create merge chain to combine all remaining tokens into a single token
     while (tokens.length > 1) {
         // Create a merge for the first two tokens
         const newTokenId = this.#makeMerge(tokens[0], tokens[1]);
@@ -807,11 +813,16 @@ After BPE:  [256, 257, 258]  // Merged frequent pairs into new tokens</code></pr
             <p>For example, reserving <code>&lt;|pad|&gt;</code>:</p>
             <ul>
                 <li>Start with bytes: <code>[60, 124, 112, 97, 100, 124, 62]</code></li>
+                <li>Apply all existing merges (if any) to collapse already-known patterns</li>
                 <li>Merge <code>(60,124)</code> -> 256</li>
                 <li>Now we have: <code>[256, 112, 97, 100, 124, 62]</code></li>
                 <li>Merge <code>(256,112)</code> -> 257</li>
                 <li>... Continue until: <code>[261]</code> - a single token!</li>
             </ul>
+
+            <p>
+                The first step - applying existing merges - is critical. It ensures that special tokens with shared prefixes like <code>&lt;|im_start|&gt;</code> and <code>&lt;|im_end|&gt;</code> correctly reuse the same merge chain for <code>&lt;|im_</code>. Without this step, encoding would fail because the merge chain would be built assuming raw bytes, but the encoder applies earlier merges first which consume those bytes differently.
+            </p>
 
             <p>
                 These merges become part of the global merge rules. When encoding encounters <code>&lt;|pad|&gt;</code> in any text, the normal merge process naturally combines it into token 261. If you reserve the same special token twice, it will simply create the same merge chain (or reuse existing merges), returning the same final token ID.

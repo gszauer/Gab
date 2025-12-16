@@ -46,12 +46,18 @@ class Tokenizer {
     reserveToken(specialTokenString) {
         const bytes = this.#stringToBytes(specialTokenString);
         let tokens = [...bytes];
-        
+
+        // Apply all existing merges first to get the current token sequence
+        for (const [mergeKey, mergedToken] of this.merges) {
+            const [token1, token2] = mergeKey.split(',').map(Number);
+            tokens = this.#applyMerge(tokens, token1, token2, mergedToken);
+        }
+
         while (tokens.length > 1) {
             const newTokenId = this.#makeMerge(tokens[0], tokens[1]);
             tokens = this.#applyMerge(tokens, tokens[0], tokens[1], newTokenId);
         }
-        
+
         const finalTokenId = tokens[0];
         console.log(`Reserved special token "${specialTokenString}" as ID ${finalTokenId}`);
         return finalTokenId;

@@ -106,18 +106,25 @@ class Tokenizer {
     }
 
     reserveToken(tokenString) {
-        const bytes = this.#stringToBytes(tokenString);
+        let tokens = this.#stringToBytes(tokenString);
 
-        if (bytes.length < 2) {
-            return bytes[0];
+        if (tokens.length < 2) {
+            return tokens[0];
         }
 
-        let currentToken = bytes[0];
-        for (let i = 1; i < bytes.length; i++) {
-            currentToken = this.#makeMerge(currentToken, bytes[i]);
+        // Apply existing merges first
+        for (const [mergeKey, mergedToken] of this.merges) {
+            const [token1, token2] = mergeKey.split(',').map(Number);
+            tokens = this.#applyMerge(tokens, token1, token2, mergedToken);
         }
 
-        return currentToken;
+        // Now merge remaining tokens together (left to right)
+        while (tokens.length > 1) {
+            const newToken = this.#makeMerge(tokens[0], tokens[1]);
+            tokens = [newToken, ...tokens.slice(2)];
+        }
+
+        return tokens[0];
     }
 
     encode(text) {

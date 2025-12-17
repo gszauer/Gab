@@ -586,8 +586,10 @@
         <article class="tool-article">
             <!-- Load Screen -->
             <div class="load-screen" id="loadScreen">
-                <h2>Load Your Model</h2>
-                <p>Upload your trained tokenizer and model files to start chatting.</p>
+                <p style="color: var(--muted); font-size: 0.9rem;">
+                    <a href="#" onclick="loadSampleModel(); return false;" style="color: var(--pink-2);">Load sample model</a>
+                    or upload your own files below.
+                </p>
 
                 <div class="file-loaders">
                     <div class="file-loader" id="tokenizerLoader">
@@ -643,7 +645,7 @@
         </article>
     </main>
 
-    <script src="gab.js"></script>
+    <script src="gab-gpu-infer.js"></script>
     <script>
         class ChatApp {
             constructor() {
@@ -1083,6 +1085,57 @@
 
         function clearChat() {
             app.clearChat();
+        }
+
+        async function loadSampleModel() {
+            const link = event.target;
+            const originalText = link.textContent;
+            link.textContent = 'Loading...';
+            link.style.pointerEvents = 'none';
+
+            try {
+                // Fetch both files in parallel
+                const [modelResponse, tokenizerResponse] = await Promise.all([
+                    fetch('model.gab'),
+                    fetch('model.bpe')
+                ]);
+
+                if (!modelResponse.ok) {
+                    throw new Error('Failed to fetch model.gab: ' + modelResponse.status);
+                }
+                if (!tokenizerResponse.ok) {
+                    throw new Error('Failed to fetch model.bpe: ' + tokenizerResponse.status);
+                }
+
+                const [modelBuffer, tokenizerBuffer] = await Promise.all([
+                    modelResponse.arrayBuffer(),
+                    tokenizerResponse.arrayBuffer()
+                ]);
+
+                // Load tokenizer
+                const tokenizerBytes = new Uint8Array(tokenizerBuffer);
+                app.tokenizer = Tokenizer.deserialize(tokenizerBytes);
+                document.getElementById('tokenizerLoader').classList.add('loaded');
+                document.getElementById('tokenizerStatus').classList.add('loaded');
+                document.getElementById('tokenizerFilename').textContent = 'model.bpe';
+                console.log('Tokenizer loaded, vocab size:', app.tokenizer.getVocabSize());
+
+                // Load model
+                const modelBytes = new Uint8Array(modelBuffer);
+                app.model = GabGPT.deserialize(modelBytes);
+                document.getElementById('modelLoader').classList.add('loaded');
+                document.getElementById('modelStatus').classList.add('loaded');
+                document.getElementById('modelFilename').textContent = 'model.gab';
+                console.log('Model loaded, vocab size:', app.model.vocabSize);
+
+                app.hideError();
+                app.checkReady();
+
+            } catch (err) {
+                app.showError('Failed to load sample model: ' + err.message);
+                link.textContent = originalText;
+                link.style.pointerEvents = '';
+            }
         }
     </script>
 </body>

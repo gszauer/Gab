@@ -146,8 +146,6 @@ function createGLContext() {
         throw new Error('EXT_color_buffer_float not supported');
     }
 
-    gl.getExtension('OES_texture_float_linear');
-
     return gl;
 }
 

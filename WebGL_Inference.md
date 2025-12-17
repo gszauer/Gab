@@ -297,95 +297,9 @@ void main() {
 float c = 0.7978845608;  // sqrt(2/pi)
 outValue = 0.5 * x * (1.0 + tanh(c * (x + 0.044715 * x * x * x)));
 ```
-
----
-
-## Data Flow Through the Model
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Input: Token IDs [seq_len]                                      │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ EMBEDDING LOOKUP                                                │
-│ Output = TokenEmb[token_id] + PosEmb[position]                  │
-│ → hiddenA [seq × 512]                                           │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ TRANSFORMER BLOCK (×6)                                          │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ LayerNorm1 → norm                                         │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                              │                                  │
-│                              ▼                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ QKV Projection (3× matmul)                                │  │
-│  │ Q = norm @ Wq    K = norm @ Wk    V = norm @ Wv           │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                              │                                  │
-│                              ▼                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ Multi-Head Attention (×8 heads)                           │  │
-│  │ scores = Q @ K.T / sqrt(64)                               │  │
-│  │ weights = softmax(scores + causal_mask)                   │  │
-│  │ head_out = weights @ V                                    │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                              │                                  │
-│                              ▼                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ Output Projection + Residual                              │  │
-│  │ hiddenB = hiddenA + attnOut @ Wo                          │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                              │                                  │
-│                              ▼                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ LayerNorm2 → norm                                         │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                              │                                  │
-│                              ▼                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │ MLP                                                       │  │
-│  │ mlpHidden = GELU(norm @ W1 + b1)                          │  │
-│  │ hiddenA = hiddenB + mlpHidden @ W2 + b2                   │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  [Swap hiddenA ↔ hiddenB, repeat for next block]                │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ FINAL LAYERNORM → norm                                          │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ OUTPUT PROJECTION (last position only)                          │
-│ logits = norm[last_pos] @ W_out + b_out                         │
-│ → logits [1 × 8192]                                             │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ SOFTMAX → probs [1 × vocab_size]                                │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ READ BACK TO CPU (gl.readPixels)                                │
-│ Sample next token from probability distribution                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## Key Implementation Patterns
+## Implementation Patterns
 
 ### 1. Ping-Pong Buffers
-
-> **Unexpected Bug**: WebGL produces undefined results if you read from and write to the same texture in one draw call.
 
 When a computation needs to both read from and write to the same logical buffer, use two physical textures and alternate:
 
@@ -495,8 +409,6 @@ gl.readPixels(0, 0, 8192, 1, gl.RED, gl.FLOAT, probsData);
 // probsData now contains the output probabilities
 ```
 
----
-
 ## Draw Call Analysis
 
 Each token generation requires the following draw calls:
@@ -533,9 +445,7 @@ Fixed ops:    1 (embed) + 1 (final LN) + 1 (output proj) + 1 (softmax) = 4
 TOTAL:        244 draw calls per token
 ```
 
-The attention computation dominates (32 calls per block × 6 blocks = 192 calls, or 79% of total).
-
----
+The attention computation dominates with 32 calls per block × 6 blocks = 192 calls, or 79% of total.
 
 ## Lessons Learned
 

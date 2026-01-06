@@ -577,7 +577,7 @@ class GabGPT {
         return this.output.forward(hidden);
     }
 
-    generate(promptTokens, maxLength, temperature = 1.0) {
+    generate(promptTokens, maxLength, temperature = 1.0, stopTokenIds = null) {
         let tokens = promptTokens.slice();
 
         for (let i = 0; i < maxLength; i++) {
@@ -585,6 +585,17 @@ class GabGPT {
             const lastProbs = probs[0][tokens.length - 1];
             const nextToken = this.#sampleWithTemperature(lastProbs, temperature);
             tokens.push(nextToken);
+
+            // Check for stop tokens after adding
+            if (stopTokenIds !== null) {
+                if (Array.isArray(stopTokenIds)) {
+                    if (stopTokenIds.includes(nextToken)) {
+                        break;
+                    }
+                } else if (nextToken === stopTokenIds) {
+                    break;
+                }
+            }
         }
 
         return tokens;
@@ -732,6 +743,7 @@ function chat(model, tokenizer, userMessage) {
     const promptTokens = tokenizer.encode(prompt);
 
     const endTokenId = tokenizer.encode("<|end|>")[0];
+    const endOfTextTokenId = tokenizer.encode("<|endoftext|>")[0];
     const generated = [];
 
     let tokens = promptTokens.slice();
@@ -749,12 +761,12 @@ function chat(model, tokenizer, userMessage) {
             }
         }
 
-        if (nextToken === endTokenId) {
-            break;
-        }
-
         tokens.push(nextToken);
         generated.push(nextToken);
+
+        if (nextToken === endTokenId || nextToken === endOfTextTokenId) {
+            break;
+        }
     }
 
     return tokenizer.decode(generated);

@@ -4,6 +4,7 @@
    Config
    ========================================================================= */
 const CONFIG = {
+  RUNTIME_VERSION: 'V1',
   DB_NAME:       'gift-of-gab',
   DB_VERSION:    3,
   STORE:         'model',
@@ -744,7 +745,7 @@ class App {
       tokenizer: this.tokenizer,
       maxContext: CONFIG.MAX_CONTEXT_TOKENS,
     });
-    console.info('Gift of Gab model:', mode, 'backend:', this.engine.backend || 'unknown');
+    console.info('Gift of Gab', CONFIG.RUNTIME_VERSION, 'model:', mode, 'backend:', this.engine.backend || 'unknown');
   }
 
   async _readTextValue(value) {
@@ -846,6 +847,7 @@ class App {
 
     try {
       for await (const { kind, token } of this.engine.generate(this.history.messages, {
+        userTokenIds: userMsg.tokens.map((tok) => tok.id),
         thinking,
         maxNewTokens: CONFIG.MAX_NEW_TOKENS,
         temperature: CONFIG.TEMPERATURE,
@@ -853,7 +855,6 @@ class App {
         signal: this.generationAbort.signal,
         onRebuild: (event) => this._handleCacheRebuild(event),
       })) {
-        if (this.stopRequested) break;
         const wantRole = (kind === 'thinking') ? 'thinking' : 'assistant';
         if (!current || current.role !== wantRole) {
           if (current) {
@@ -874,6 +875,9 @@ class App {
     } catch (e) {
       if (!this._isAbortError(e)) console.error('Generation error:', e);
     } finally {
+      if (this.engine && typeof this.engine.ensureAssistantTurnEnded === 'function') {
+        await this.engine.ensureAssistantTurnEnded((event) => this._handleCacheRebuild(event));
+      }
       if (current && !current.complete) {
         current.complete = true;
         this.chatRenderer.finalize(current);

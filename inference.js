@@ -80,6 +80,8 @@
   function initSessionState(engine) {
     engine.sessionIds = [];
     engine.sessionLogits = null;
+    engine.sessionOpenAssistant = false;
+    engine.sessionOpenThinking = false;
     engine.retainContext = Math.max(1, Math.floor(engine.maxContext / 2));
     engine.boundaryLookahead = Math.min(256, engine.retainContext);
   }
@@ -396,29 +398,45 @@
       const signal = options.signal || null;
       const onRebuild = options.onRebuild || null;
       let mode = wantsThinking ? 'thinking' : 'response';
-      throwIfAborted(signal);
+      let pendingId = null;
 
-      let logits = await this._preparePrompt(messages, wantsThinking, signal, onRebuild);
-
-      for (let i = 0; i < maxNewTokens; i++) {
+      try {
         throwIfAborted(signal);
-        const nextId = this._sample(logits, temperature, topK);
-        if (this._shouldStop(nextId)) {
-          if (nextId === this.eosId) {
-            await this._appendToken(nextId, signal, onRebuild);
+
+        let logits = Array.isArray(options.userTokenIds)
+          ? await this._prepareTurn(options.userTokenIds, wantsThinking, signal, onRebuild)
+          : await this._preparePrompt(messages, wantsThinking, signal, onRebuild);
+
+        for (let i = 0; i < maxNewTokens; i++) {
+          throwIfAborted(signal);
+          const nextId = this._sample(logits, temperature, topK);
+          if (this._shouldStop(nextId)) {
+            if (nextId === this.eosId) {
+              await this._appendToken(nextId, signal, onRebuild);
+            }
+            break;
           }
-          break;
-        }
 
-        if (nextId === this.thinkCloseId) {
-          mode = 'response';
-        } else if (nextId !== this.thinkOpenId && !this.tokenizer.isSpecialId(nextId)) {
-          yield { kind: mode, token: { id: nextId, text: this.tokenizer.decodeToken(nextId) } };
-        }
+          if (nextId === this.thinkCloseId) {
+            mode = 'response';
+            logits = await this._appendToken(nextId, signal, onRebuild);
+          } else if (nextId === this.thinkOpenId || this.tokenizer.isSpecialId(nextId)) {
+            logits = await this._appendToken(nextId, signal, onRebuild);
+          } else {
+            pendingId = nextId;
+            yield { kind: mode, token: { id: nextId, text: this.tokenizer.decodeToken(nextId) } };
+            logits = await this._appendToken(pendingId, signal, onRebuild);
+            pendingId = null;
+          }
 
-        logits = await this._appendToken(nextId, signal, onRebuild);
-        await nextFrame();
-        throwIfAborted(signal);
+          await nextFrame();
+          throwIfAborted(signal);
+        }
+      } finally {
+        if (pendingId !== null) {
+          await this._appendToken(pendingId, null, onRebuild);
+        }
+        await this._ensureAssistantTurnEnded(onRebuild);
       }
     }
 
@@ -443,6 +461,8 @@
       if (alignedAt < 0) {
         this.sessionIds = [];
         this.sessionLogits = null;
+        this.sessionOpenAssistant = false;
+        this.sessionOpenThinking = false;
         await this._appendTokens(promptIds, signal, onRebuild);
         return this.sessionLogits;
       }
@@ -450,6 +470,30 @@
       const suffix = promptIds.slice(alignedAt + this.sessionIds.length);
       if (suffix.length) await this._appendTokens(suffix, signal, onRebuild);
       return this.sessionLogits;
+    }
+
+    async _prepareTurn(userTokenIds, thinking, signal, onRebuild) {
+      await this._closeAssistantTurn(signal, onRebuild);
+      const ids = [this.userId, ...userTokenIds, this.eosId, this.assistantId];
+      if (thinking) ids.push(this.thinkOpenId);
+      await this._appendTokens(ids, signal, onRebuild);
+      return this.sessionLogits;
+    }
+
+    async _closeAssistantTurn(signal, onRebuild) {
+      if (!this.sessionOpenAssistant) return;
+      const ids = [];
+      if (this.sessionOpenThinking) ids.push(this.thinkCloseId);
+      ids.push(this.eosId);
+      await this._appendTokens(ids, signal, onRebuild);
+    }
+
+    async _ensureAssistantTurnEnded(onRebuild) {
+      await this._closeAssistantTurn(null, onRebuild);
+    }
+
+    async ensureAssistantTurnEnded(onRebuild) {
+      await this._ensureAssistantTurnEnded(onRebuild);
     }
 
     _findSessionInPrompt(promptIds) {
@@ -473,8 +517,12 @@
 
     async _appendTokens(ids, signal, onRebuild) {
       let logits = this.sessionLogits;
-      for (const id of ids) {
-        logits = await this._appendToken(id, signal, onRebuild);
+      for (let i = 0; i < ids.length; i++) {
+        logits = await this._appendToken(ids[i], signal, onRebuild);
+        if ((i & 1) === 1) {
+          await nextFrame();
+          throwIfAborted(signal);
+        }
       }
       return logits;
     }
@@ -489,7 +537,25 @@
       const logits = await this.forwardToken(id, position);
       this.sessionIds.push(id);
       this.sessionLogits = logits;
+      this._noteSessionToken(id);
       return logits;
+    }
+
+    _noteSessionToken(id) {
+      if (id === this.userId) {
+        this.sessionOpenAssistant = false;
+        this.sessionOpenThinking = false;
+      } else if (id === this.assistantId) {
+        this.sessionOpenAssistant = true;
+        this.sessionOpenThinking = false;
+      } else if (id === this.thinkOpenId && this.sessionOpenAssistant) {
+        this.sessionOpenThinking = true;
+      } else if (id === this.thinkCloseId) {
+        this.sessionOpenThinking = false;
+      } else if (id === this.eosId || id === this.padId) {
+        this.sessionOpenAssistant = false;
+        this.sessionOpenThinking = false;
+      }
     }
 
     async _compactSession(signal, onRebuild) {
@@ -1300,6 +1366,22 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
       return GabCpuInferenceEngine.prototype._preparePrompt.call(this, messages, thinking, signal, onRebuild);
     }
 
+    async _prepareTurn(userTokenIds, thinking, signal, onRebuild) {
+      return GabCpuInferenceEngine.prototype._prepareTurn.call(this, userTokenIds, thinking, signal, onRebuild);
+    }
+
+    async _closeAssistantTurn(signal, onRebuild) {
+      return GabCpuInferenceEngine.prototype._closeAssistantTurn.call(this, signal, onRebuild);
+    }
+
+    async _ensureAssistantTurnEnded(onRebuild) {
+      return GabCpuInferenceEngine.prototype._ensureAssistantTurnEnded.call(this, onRebuild);
+    }
+
+    async ensureAssistantTurnEnded(onRebuild) {
+      return GabCpuInferenceEngine.prototype.ensureAssistantTurnEnded.call(this, onRebuild);
+    }
+
     _findSessionInPrompt(promptIds) {
       return GabCpuInferenceEngine.prototype._findSessionInPrompt.call(this, promptIds);
     }
@@ -1318,6 +1400,10 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
     _retainedSessionIds() {
       return GabCpuInferenceEngine.prototype._retainedSessionIds.call(this);
+    }
+
+    _noteSessionToken(id) {
+      return GabCpuInferenceEngine.prototype._noteSessionToken.call(this, id);
     }
 
     async forwardToken(tokenId, position) {

@@ -448,6 +448,8 @@ class App {
     this.downloadErr    = document.getElementById('downloadError');
     this.resetBtn       = document.getElementById('resetDbBtn');
     this.resetStatus    = document.getElementById('resetStatus');
+    this.cacheOverlay   = document.getElementById('cacheOverlay');
+    this.cacheOverlayDetail = document.getElementById('cacheOverlayDetail');
 
     this.storage    = new ModelStorage(CONFIG.DB_NAME, CONFIG.DB_VERSION, CONFIG.STORE);
     this.downloader = new ModelDownloader(this.storage);
@@ -462,6 +464,7 @@ class App {
     this.generating = false;
     this.stopRequested = false;
     this.generationAbort = null;
+    this.cacheOverlayTimer = 0;
   }
 
   async init() {
@@ -795,6 +798,26 @@ class App {
     return err && (err.name === 'AbortError' || err.code === 20);
   }
 
+  _handleCacheRebuild(event) {
+    if (!this.cacheOverlay) return;
+    if (event.phase === 'start') {
+      if (this.cacheOverlayDetail) {
+        const kept = event.kept || 0;
+        const dropped = event.dropped || 0;
+        this.cacheOverlayDetail.textContent =
+          'Keeping ' + kept.toLocaleString() + ' tokens, dropping ' + dropped.toLocaleString() + '.';
+      }
+      clearTimeout(this.cacheOverlayTimer);
+      this.cacheOverlayTimer = setTimeout(() => {
+        this.cacheOverlay.classList.add('active');
+      }, 200);
+    } else if (event.phase === 'end') {
+      clearTimeout(this.cacheOverlayTimer);
+      this.cacheOverlayTimer = 0;
+      this.cacheOverlay.classList.remove('active');
+    }
+  }
+
   async _handleSend() {
     const text = this.inputEl.value.trim();
     if (!text || this.generating || this.appEl.dataset.state !== 'ready') return;
@@ -828,6 +851,7 @@ class App {
         temperature: CONFIG.TEMPERATURE,
         topK: CONFIG.TOP_K,
         signal: this.generationAbort.signal,
+        onRebuild: (event) => this._handleCacheRebuild(event),
       })) {
         if (this.stopRequested) break;
         const wantRole = (kind === 'thinking') ? 'thinking' : 'assistant';
@@ -858,6 +882,7 @@ class App {
       this.generating = false;
       this.stopRequested = false;
       this.generationAbort = null;
+      this._handleCacheRebuild({ phase: 'end' });
       this._updateSendEnabled();
       this.inputEl.focus();
     }

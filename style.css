@@ -557,6 +557,41 @@
     display: none;
   }
 
+  /* ---- KV cache rebuild status ---- */
+  .cache-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: var(--inset);
+    background: rgba(16,15,13,0.36);
+    pointer-events: none;
+  }
+  .cache-overlay.active { display: flex; }
+  .cache-box {
+    width: min(100%, 300px);
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elev);
+    box-shadow: 0 18px 50px rgba(0,0,0,0.32);
+    text-align: center;
+  }
+  .cache-title {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 18px;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .cache-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
   /* ---- Modal ---- */
   .modal-backdrop {
     position: fixed;

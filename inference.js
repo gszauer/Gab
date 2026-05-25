@@ -64,6 +64,19 @@
     });
   }
 
+  function abortError() {
+    if (typeof DOMException === 'function') {
+      return new DOMException('Generation stopped.', 'AbortError');
+    }
+    const err = new Error('Generation stopped.');
+    err.name = 'AbortError';
+    return err;
+  }
+
+  function throwIfAborted(signal) {
+    if (signal && signal.aborted) throw abortError();
+  }
+
   class GabTokenizer {
     constructor(tokenizerJson) {
       const model = tokenizerJson.model;
@@ -372,17 +385,20 @@
       const temperature = options.temperature ?? 0.8;
       const topK = options.topK || 50;
       const wantsThinking = !!options.thinking;
+      const signal = options.signal || null;
       let mode = wantsThinking ? 'thinking' : 'response';
+      throwIfAborted(signal);
 
       let ids = this.tokenizer.encode(this._buildPrompt(messages, wantsThinking));
       if (ids.length > this.maxContext) ids = ids.slice(ids.length - this.maxContext);
       if (!ids.length) ids = [this.eosId];
 
       let contextIds = ids.slice();
-      let logits = await this._prefillContext(contextIds);
+      let logits = await this._prefillContext(contextIds, signal);
       let position = contextIds.length;
 
       for (let i = 0; i < maxNewTokens; i++) {
+        throwIfAborted(signal);
         const nextId = this._sample(logits, temperature, topK);
         if (this._shouldStop(nextId)) break;
 
@@ -394,20 +410,26 @@
 
         if (position >= this.maxContext) {
           contextIds = contextIds.slice(-(this.maxContext - 1));
-          logits = await this._prefillContext(contextIds);
+          logits = await this._prefillContext(contextIds, signal);
           position = contextIds.length;
         }
+        throwIfAborted(signal);
         logits = this.forwardToken(nextId, position++);
         contextIds.push(nextId);
         await nextFrame();
+        throwIfAborted(signal);
       }
     }
 
-    async _prefillContext(ids) {
+    async _prefillContext(ids, signal = null) {
       let logits = null;
       for (let i = 0; i < ids.length; i++) {
+        throwIfAborted(signal);
         logits = this.forwardToken(ids[i], i);
-        if ((i & 1) === 1) await nextFrame();
+        if ((i & 1) === 1) {
+          await nextFrame();
+          throwIfAborted(signal);
+        }
       }
       return logits;
     }
@@ -1181,17 +1203,20 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
       const temperature = options.temperature ?? 0.8;
       const topK = options.topK || 50;
       const wantsThinking = !!options.thinking;
+      const signal = options.signal || null;
       let mode = wantsThinking ? 'thinking' : 'response';
+      throwIfAborted(signal);
 
       let ids = this.tokenizer.encode(this._buildPrompt(messages, wantsThinking));
       if (ids.length > this.maxContext) ids = ids.slice(ids.length - this.maxContext);
       if (!ids.length) ids = [this.eosId];
 
       let contextIds = ids.slice();
-      let logits = await this._prefillContext(contextIds);
+      let logits = await this._prefillContext(contextIds, signal);
       let position = contextIds.length;
 
       for (let i = 0; i < maxNewTokens; i++) {
+        throwIfAborted(signal);
         const nextId = this._sample(logits, temperature, topK);
         if (this._shouldStop(nextId)) break;
 
@@ -1203,20 +1228,26 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 
         if (position >= this.maxContext) {
           contextIds = contextIds.slice(-(this.maxContext - 1));
-          logits = await this._prefillContext(contextIds);
+          logits = await this._prefillContext(contextIds, signal);
           position = contextIds.length;
         }
+        throwIfAborted(signal);
         logits = await this.forwardToken(nextId, position++);
         contextIds.push(nextId);
         await nextFrame();
+        throwIfAborted(signal);
       }
     }
 
-    async _prefillContext(ids) {
+    async _prefillContext(ids, signal = null) {
       let logits = null;
       for (let i = 0; i < ids.length; i++) {
+        throwIfAborted(signal);
         logits = await this.forwardToken(ids[i], i);
-        if ((i & 3) === 3) await nextFrame();
+        if ((i & 3) === 3) {
+          await nextFrame();
+          throwIfAborted(signal);
+        }
       }
       return logits;
     }

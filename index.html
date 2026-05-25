@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>The Gift Of Gab</title>
+
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app" id="app" data-state="boot" data-view="chat">
+
+  <header class="header">
+    <h1>The Gift Of Gab</h1>
+    <button class="icon-btn" id="helpBtn" title="About" aria-label="About">?</button>
+  </header>
+
+  <main class="chat-wrap">
+    <div class="chat-scroll" id="chatScroll">
+      <div class="view-chat" id="viewChat"></div>
+      <div class="view-raw"  id="viewRaw"></div>
+    </div>
+
+    <div class="download-screen" id="downloadScreen">
+      <h2 class="title">The Gift Of Gab</h2>
+      <p class="sub">
+        Choose a local model to download. F32 is higher quality. Q8 is smaller and runs better
+        on mobile, but it will often appear dumber because quantization reduces weight precision.
+        Only one model is cached at a time.
+      </p>
+      <div class="download-actions">
+        <button class="download-btn" data-model="f32">Download Full F32 (380 MiB)</button>
+        <button class="download-btn" data-model="q8">Download Quantized Q8 (100 MiB)</button>
+      </div>
+      <p class="download-note">To switch models later, open ? and use Reset to clear the local cache.</p>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+        <div class="progress-label">
+          <span id="progressFile">preparing</span>
+          <span id="progressPct">0%</span>
+        </div>
+      </div>
+      <div class="download-error" id="downloadError"></div>
+    </div>
+  </main>
+
+  <div class="input-area">
+    <div class="input-row">
+      <textarea class="input" id="input" placeholder="Say something..." rows="1"></textarea>
+    </div>
+    <div class="controls">
+      <div class="toggles">
+        <label class="toggle"><input type="checkbox" id="thinkCb" /><span class="track"><span class="thumb"></span></span>Thinking</label>
+        <label class="toggle"><input type="checkbox" id="viewCb" checked /><span class="track"><span class="thumb"></span></span>Chat view</label>
+      </div>
+      <button class="send-btn" id="sendBtn" disabled>Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modalBackdrop"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true">
+  <div class="modal-header">
+    <div class="tabs">
+      <button class="tab active" data-tab="about">About</button>
+      <button class="tab" data-tab="arch">Architecture</button>
+      <button class="tab" data-tab="reset">Reset</button>
+    </div>
+    <button class="icon-btn" id="closeModalBtn" aria-label="Close">×</button>
+  </div>
+  <div class="modal-body">
+    <section class="modal-pane active" data-pane="about">
+      <h2>About</h2>
+      <p>
+        <em>The Gift Of Gab</em> is a small language model — about 100&nbsp;million parameters — that
+        runs entirely inside your browser. Nothing you type leaves your machine.
+      </p>
+      <p>
+        Choose either the full F32 weights, about 380&nbsp;MiB, or the smaller Q8 weights,
+        about 100&nbsp;MiB. F32 is higher quality; Q8 is faster to download and usually
+        runs better on phones. The selected model and tokenizer are stored locally in
+        IndexedDB, so subsequent visits load from your device.
+      </p>
+      <h3>Links</h3>
+      <p class="muted">
+        Model:
+        <a href="https://huggingface.co/gszauer/Gab100M" target="_blank" rel="noopener noreferrer">Gab100M on Hugging Face</a>
+      </p>
+      <p class="muted">
+        Training data:
+        <a href="https://huggingface.co/datasets/gszauer/Gab100MPretrain" target="_blank" rel="noopener noreferrer">Gab100MPretrain</a>
+      </p>
+      <p class="muted">
+        Fine-tuning data:
+        <a href="https://huggingface.co/datasets/gszauer/Gab100MFinetune" target="_blank" rel="noopener noreferrer">Gab100MFinetune</a>
+      </p>
+      <p class="muted">
+        Blog/site:
+        <a href="https://gabormakesgames.com" target="_blank" rel="noopener noreferrer">gabormakesgames.com</a>
+      </p>
+      <h3>Notes</h3>
+      <p class="muted">
+        This is a research project running a small local model. Expect quirks. Refresh to start over;
+        there's no chat history kept between sessions.
+      </p>
+    </section>
+
+    <section class="modal-pane" data-pane="arch">
+      <h2>Architecture</h2>
+      <p>
+        Decoder-only transformer with pre-normalization, rotary position embeddings,
+        exact GeLU feed-forward blocks, and tied input/output embeddings.
+      </p>
+
+      <h3>Specs</h3>
+      <div class="spec-table">
+        <div><span class="k">parameters</span><span class="v">99,711,744</span></div>
+        <div><span class="k">layers</span><span class="v">12</span></div>
+        <div><span class="k">hidden size</span><span class="v">768</span></div>
+        <div><span class="k">MLP size</span><span class="v">3456</span></div>
+        <div><span class="k">attention heads</span><span class="v">12</span></div>
+        <div><span class="k">head dim</span><span class="v">64</span></div>
+        <div><span class="k">context length</span><span class="v">4096 active, rolling window</span></div>
+        <div><span class="k">vocab size</span><span class="v">10,000</span></div>
+        <div><span class="k">RoPE theta</span><span class="v">100,000</span></div>
+        <div><span class="k">norm epsilon</span><span class="v">1e-5</span></div>
+        <div><span class="k">model files</span><span class="v">Q8 rowwise or full F32</span></div>
+      </div>
+
+      <h3>Forward Pass</h3>
+      <p class="muted">For token ids <code>x</code>, look up embeddings <code>h = E[x]</code>, where <code>E</code> has shape <code>[10000, 768]</code>. Each of the 12 blocks applies:</p>
+      <p><code>h = h + Attention(RMSNorm(h))</code></p>
+      <p><code>h = h + MLP(RMSNorm(h))</code></p>
+      <p class="muted">After the final block:</p>
+      <p><code>logits = RMSNorm(h) @ E.T</code></p>
+      <p class="muted">There is no separate output head; logits use the tied embedding matrix.</p>
+
+      <h3>RMSNorm</h3>
+      <p class="muted">Each norm has one learned scale vector <code>g</code> of length 768 and no bias:</p>
+      <p><code>RMSNorm(x) = g * x / sqrt(mean(x^2) + 1e-5)</code></p>
+
+      <h3>Attention</h3>
+      <p class="muted">For each block, normalized hidden states are projected with bias-free matrices:</p>
+      <p><code>q = x @ Wq.T</code>, <code>k = x @ Wk.T</code>, <code>v = x @ Wv.T</code></p>
+      <p class="muted">Each projection has shape <code>[768, 768]</code>. The result is reshaped to <code>[12 heads, seq, 64]</code>. RoPE is applied to q and k before the causal attention scores:</p>
+      <p><code>scores = (q @ k.T) / sqrt(64)</code></p>
+      <p><code>attn = softmax(causal_mask(scores)) @ v</code></p>
+      <p><code>Attention(x) = concat(attn_heads) @ Wo.T</code></p>
+      <p class="muted"><code>Wo</code> is also <code>[768, 768]</code> and bias-free.</p>
+
+      <h3>RoPE</h3>
+      <p class="muted">Rotary position embeddings use split-half rotation, matching Llama-style RoPE. For each pair index <code>i</code> in a 64-wide head:</p>
+      <p><code>freq_i = 1 / theta^(2i / 64)</code>, with <code>theta = 100000</code></p>
+      <p><code>angle = position * freq_i</code></p>
+      <p class="muted">The first 32 channels and last 32 channels form rotation pairs:</p>
+      <p><code>[a, b] -> [a*cos(angle) - b*sin(angle), b*cos(angle) + a*sin(angle)]</code></p>
+
+      <h3>MLP</h3>
+      <p class="muted">The feed-forward path is a two-matrix GeLU MLP with no gate and no biases:</p>
+      <p><code>u = x @ Wup.T</code>, where <code>Wup</code> is <code>[3456, 768]</code></p>
+      <p><code>m = GeLU(u)</code></p>
+      <p><code>MLP(x) = m @ Wdown.T</code>, where <code>Wdown</code> is <code>[768, 3456]</code></p>
+      <p class="muted">GeLU is the exact form:</p>
+      <p><code>GeLU(x) = 0.5 * x * (1 + erf(x / sqrt(2)))</code></p>
+
+      <h3>Tokenizer</h3>
+      <p class="muted">
+        The tokenizer is byte-level BPE with 10,000 ids. Special tokens occupy ids 0-16:
+        <code>&lt;|end|&gt;</code>, <code>&lt;|user|&gt;</code>, <code>&lt;|assistant|&gt;</code>,
+        <code>&lt;think&gt;</code>, <code>&lt;/think&gt;</code>, and related reserved tokens.
+        Normal text is split by the GPT-style regex pre-tokenizer, converted through the GPT-2
+        byte-to-unicode map, then BPE merges are applied.
+      </p>
+
+      <h3>Runtime</h3>
+      <p class="muted">
+        Inference uses a local JavaScript/WebGPU runtime with a float32 KV cache.
+        Weights live in <code>IndexedDB</code>; Q8 keeps weights quantized for smaller/faster
+        mobile runs, while F32 keeps the original fine-tuned precision. Q8 uses symmetric
+        rowwise int8 weights with float32 scales:
+      </p>
+      <p><code>weight[row, col] = int8[row, col] * scale[row]</code></p>
+
+      <h3>Chat template</h3>
+      <p class="muted">Turns are concatenated with no whitespace or separators between special tokens:</p>
+      <p><code>&lt;|user|&gt;…&lt;|end|&gt;&lt;|assistant|&gt;&lt;think&gt;…&lt;/think&gt;…&lt;|end|&gt;</code></p>
+      <p class="muted">Thinking is optional and lives inside the assistant turn. Turn off <em>Chat view</em> to see the actual token stream as the model sees it, sub-word BPE tokens included.</p>
+    </section>
+
+    <section class="modal-pane" data-pane="reset">
+      <h2>Reset</h2>
+      <p>
+        This clears the locally cached model files from IndexedDB. Use it if the download was
+        interrupted, the model files changed, or you want to switch between Q8 and F32.
+      </p>
+      <p class="muted">
+        Your current chat will be lost and the page will reload. After reload, the app will show
+        the download screen again.
+      </p>
+      <button class="danger-btn" id="resetDbBtn">Delete local model</button>
+      <p class="reset-status" id="resetStatus"></p>
+    </section>
+  </div>
+</div>
+
+<script src="inference.js"></script>
+<script src="interface.js"></script>
+
+</body>
+</html>

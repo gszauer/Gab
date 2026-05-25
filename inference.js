@@ -6,7 +6,7 @@
    This is a memory-oriented Q8 CPU engine:
      - weights remain rowwise int8 + fp32 scales
      - no full fp32 dequantization copy is created
-     - autoregressive generation uses a per-layer fp32 KV cache
+     - autoregressive generation uses a persistent per-layer fp32 KV cache
 
    The public surface used by interface.js is:
      new GabTokenizer(tokenizerJson)
@@ -75,6 +75,15 @@
 
   function throwIfAborted(signal) {
     if (signal && signal.aborted) throw abortError();
+  }
+
+  function initSessionState(engine) {
+    engine.sessionIds = [];
+    engine.sessionLogits = null;
+    engine.sessionOpenAssistant = false;
+    engine.sessionOpenThinking = false;
+    engine.retainContext = Math.max(1, Math.floor(engine.maxContext / 2));
+    engine.boundaryLookahead = Math.min(256, engine.retainContext);
   }
 
   class GabTokenizer {
@@ -328,6 +337,7 @@
       this.assistantId = tokenizer.idFor(ROLE_TOKENS.assistant);
       this.thinkOpenId = tokenizer.idFor(ROLE_TOKENS.thinkOpen);
       this.thinkCloseId = tokenizer.idFor(ROLE_TOKENS.thinkClose);
+      initSessionState(this);
     }
 
     static async create(options) {
@@ -386,38 +396,47 @@
       const topK = options.topK || 50;
       const wantsThinking = !!options.thinking;
       const signal = options.signal || null;
+      const onRebuild = options.onRebuild || null;
       let mode = wantsThinking ? 'thinking' : 'response';
-      throwIfAborted(signal);
+      let pendingId = null;
 
-      let ids = this.tokenizer.encode(this._buildPrompt(messages, wantsThinking));
-      if (ids.length > this.maxContext) ids = ids.slice(ids.length - this.maxContext);
-      if (!ids.length) ids = [this.eosId];
-
-      let contextIds = ids.slice();
-      let logits = await this._prefillContext(contextIds, signal);
-      let position = contextIds.length;
-
-      for (let i = 0; i < maxNewTokens; i++) {
+      try {
         throwIfAborted(signal);
-        const nextId = this._sample(logits, temperature, topK);
-        if (this._shouldStop(nextId)) break;
 
-        if (nextId === this.thinkCloseId) {
-          mode = 'response';
-        } else if (nextId !== this.thinkOpenId && !this.tokenizer.isSpecialId(nextId)) {
-          yield { kind: mode, token: { id: nextId, text: this.tokenizer.decodeToken(nextId) } };
+        let logits = Array.isArray(options.userTokenIds)
+          ? await this._prepareTurn(options.userTokenIds, wantsThinking, signal, onRebuild)
+          : await this._preparePrompt(messages, wantsThinking, signal, onRebuild);
+
+        for (let i = 0; i < maxNewTokens; i++) {
+          throwIfAborted(signal);
+          const nextId = this._sample(logits, temperature, topK);
+          if (this._shouldStop(nextId)) {
+            if (nextId === this.eosId) {
+              await this._appendToken(nextId, signal, onRebuild);
+            }
+            break;
+          }
+
+          if (nextId === this.thinkCloseId) {
+            mode = 'response';
+            logits = await this._appendToken(nextId, signal, onRebuild);
+          } else if (nextId === this.thinkOpenId || this.tokenizer.isSpecialId(nextId)) {
+            logits = await this._appendToken(nextId, signal, onRebuild);
+          } else {
+            pendingId = nextId;
+            yield { kind: mode, token: { id: nextId, text: this.tokenizer.decodeToken(nextId) } };
+            logits = await this._appendToken(pendingId, signal, onRebuild);
+            pendingId = null;
+          }
+
+          await nextFrame();
+          throwIfAborted(signal);
         }
-
-        if (position >= this.maxContext) {
-          contextIds = contextIds.slice(-(this.maxContext - 1));
-          logits = await this._prefillContext(contextIds, signal);
-          position = contextIds.length;
+      } finally {
+        if (pendingId !== null) {
+          await this._appendToken(pendingId, null, onRebuild);
         }
-        throwIfAborted(signal);
-        logits = this.forwardToken(nextId, position++);
-        contextIds.push(nextId);
-        await nextFrame();
-        throwIfAborted(signal);
+        await this._ensureAssistantTurnEnded(onRebuild);
       }
     }
 
@@ -425,13 +444,149 @@
       let logits = null;
       for (let i = 0; i < ids.length; i++) {
         throwIfAborted(signal);
-        logits = this.forwardToken(ids[i], i);
+        logits = await this.forwardToken(ids[i], i);
         if ((i & 1) === 1) {
           await nextFrame();
           throwIfAborted(signal);
         }
       }
       return logits;
+    }
+
+    async _preparePrompt(messages, thinking, signal, onRebuild) {
+      let promptIds = this.tokenizer.encode(this._buildPrompt(messages, thinking));
+      if (!promptIds.length) promptIds = [this.eosId];
+
+      const alignedAt = this._findSessionInPrompt(promptIds);
+      if (alignedAt < 0) {
+        this.sessionIds = [];
+        this.sessionLogits = null;
+        this.sessionOpenAssistant = false;
+        this.sessionOpenThinking = false;
+        await this._appendTokens(promptIds, signal, onRebuild);
+        return this.sessionLogits;
+      }
+
+      const suffix = promptIds.slice(alignedAt + this.sessionIds.length);
+      if (suffix.length) await this._appendTokens(suffix, signal, onRebuild);
+      return this.sessionLogits;
+    }
+
+    async _prepareTurn(userTokenIds, thinking, signal, onRebuild) {
+      await this._closeAssistantTurn(signal, onRebuild);
+      const ids = [this.userId, ...userTokenIds, this.eosId, this.assistantId];
+      if (thinking) ids.push(this.thinkOpenId);
+      await this._appendTokens(ids, signal, onRebuild);
+      return this.sessionLogits;
+    }
+
+    async _closeAssistantTurn(signal, onRebuild) {
+      if (!this.sessionOpenAssistant) return;
+      const ids = [];
+      if (this.sessionOpenThinking) ids.push(this.thinkCloseId);
+      ids.push(this.eosId);
+      await this._appendTokens(ids, signal, onRebuild);
+    }
+
+    async _ensureAssistantTurnEnded(onRebuild) {
+      await this._closeAssistantTurn(null, onRebuild);
+    }
+
+    async ensureAssistantTurnEnded(onRebuild) {
+      await this._ensureAssistantTurnEnded(onRebuild);
+    }
+
+    _findSessionInPrompt(promptIds) {
+      const needle = this.sessionIds;
+      if (!needle.length) return 0;
+      if (needle.length > promptIds.length) return -1;
+
+      const lastStart = promptIds.length - needle.length;
+      for (let start = lastStart; start >= 0; start--) {
+        let ok = true;
+        for (let i = 0; i < needle.length; i++) {
+          if (promptIds[start + i] !== needle[i]) {
+            ok = false;
+            break;
+          }
+        }
+        if (ok) return start;
+      }
+      return -1;
+    }
+
+    async _appendTokens(ids, signal, onRebuild) {
+      let logits = this.sessionLogits;
+      for (let i = 0; i < ids.length; i++) {
+        logits = await this._appendToken(ids[i], signal, onRebuild);
+        if ((i & 1) === 1) {
+          await nextFrame();
+          throwIfAborted(signal);
+        }
+      }
+      return logits;
+    }
+
+    async _appendToken(id, signal, onRebuild) {
+      throwIfAborted(signal);
+      if (this.sessionIds.length >= this.maxContext) {
+        await this._compactSession(signal, onRebuild);
+      }
+      throwIfAborted(signal);
+      const position = this.sessionIds.length;
+      const logits = await this.forwardToken(id, position);
+      this.sessionIds.push(id);
+      this.sessionLogits = logits;
+      this._noteSessionToken(id);
+      return logits;
+    }
+
+    _noteSessionToken(id) {
+      if (id === this.userId) {
+        this.sessionOpenAssistant = false;
+        this.sessionOpenThinking = false;
+      } else if (id === this.assistantId) {
+        this.sessionOpenAssistant = true;
+        this.sessionOpenThinking = false;
+      } else if (id === this.thinkOpenId && this.sessionOpenAssistant) {
+        this.sessionOpenThinking = true;
+      } else if (id === this.thinkCloseId) {
+        this.sessionOpenThinking = false;
+      } else if (id === this.eosId || id === this.padId) {
+        this.sessionOpenAssistant = false;
+        this.sessionOpenThinking = false;
+      }
+    }
+
+    async _compactSession(signal, onRebuild) {
+      const before = this.sessionIds.length;
+      const retained = this._retainedSessionIds();
+      if (onRebuild) {
+        onRebuild({ phase: 'start', dropped: before - retained.length, kept: retained.length });
+      }
+      try {
+        this.sessionIds = [];
+        this.sessionLogits = null;
+        this.sessionLogits = await this._prefillContext(retained, signal);
+        this.sessionIds = retained.slice();
+      } finally {
+        if (onRebuild) onRebuild({ phase: 'end' });
+      }
+    }
+
+    _retainedSessionIds() {
+      const ids = this.sessionIds;
+      if (ids.length <= this.retainContext) return ids.slice();
+
+      let start = ids.length - this.retainContext;
+      const maxStart = Math.min(ids.length - 1, start + this.boundaryLookahead);
+      for (let i = start; i <= maxStart; i++) {
+        if (ids[i] === this.userId) {
+          start = i;
+          break;
+        }
+      }
+      return ids.slice(start);
     }
 
     forwardToken(tokenId, position) {
@@ -965,6 +1120,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
       this.assistantId = tokenizer.idFor(ROLE_TOKENS.assistant);
       this.thinkOpenId = tokenizer.idFor(ROLE_TOKENS.thinkOpen);
       this.thinkCloseId = tokenizer.idFor(ROLE_TOKENS.thinkClose);
+      initSessionState(this);
     }
 
     static async create(options) {
@@ -1199,57 +1355,55 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     }
 
     async *generate(messages, options = {}) {
-      const maxNewTokens = options.maxNewTokens || 128;
-      const temperature = options.temperature ?? 0.8;
-      const topK = options.topK || 50;
-      const wantsThinking = !!options.thinking;
-      const signal = options.signal || null;
-      let mode = wantsThinking ? 'thinking' : 'response';
-      throwIfAborted(signal);
-
-      let ids = this.tokenizer.encode(this._buildPrompt(messages, wantsThinking));
-      if (ids.length > this.maxContext) ids = ids.slice(ids.length - this.maxContext);
-      if (!ids.length) ids = [this.eosId];
-
-      let contextIds = ids.slice();
-      let logits = await this._prefillContext(contextIds, signal);
-      let position = contextIds.length;
-
-      for (let i = 0; i < maxNewTokens; i++) {
-        throwIfAborted(signal);
-        const nextId = this._sample(logits, temperature, topK);
-        if (this._shouldStop(nextId)) break;
-
-        if (nextId === this.thinkCloseId) {
-          mode = 'response';
-        } else if (nextId !== this.thinkOpenId && !this.tokenizer.isSpecialId(nextId)) {
-          yield { kind: mode, token: { id: nextId, text: this.tokenizer.decodeToken(nextId) } };
-        }
-
-        if (position >= this.maxContext) {
-          contextIds = contextIds.slice(-(this.maxContext - 1));
-          logits = await this._prefillContext(contextIds, signal);
-          position = contextIds.length;
-        }
-        throwIfAborted(signal);
-        logits = await this.forwardToken(nextId, position++);
-        contextIds.push(nextId);
-        await nextFrame();
-        throwIfAborted(signal);
-      }
+      yield* GabCpuInferenceEngine.prototype.generate.call(this, messages, options);
     }
 
     async _prefillContext(ids, signal = null) {
-      let logits = null;
-      for (let i = 0; i < ids.length; i++) {
-        throwIfAborted(signal);
-        logits = await this.forwardToken(ids[i], i);
-        if ((i & 3) === 3) {
-          await nextFrame();
-          throwIfAborted(signal);
-        }
-      }
-      return logits;
+      return GabCpuInferenceEngine.prototype._prefillContext.call(this, ids, signal);
+    }
+
+    async _preparePrompt(messages, thinking, signal, onRebuild) {
+      return GabCpuInferenceEngine.prototype._preparePrompt.call(this, messages, thinking, signal, onRebuild);
+    }
+
+    async _prepareTurn(userTokenIds, thinking, signal, onRebuild) {
+      return GabCpuInferenceEngine.prototype._prepareTurn.call(this, userTokenIds, thinking, signal, onRebuild);
+    }
+
+    async _closeAssistantTurn(signal, onRebuild) {
+      return GabCpuInferenceEngine.prototype._closeAssistantTurn.call(this, signal, onRebuild);
+    }
+
+    async _ensureAssistantTurnEnded(onRebuild) {
+      return GabCpuInferenceEngine.prototype._ensureAssistantTurnEnded.call(this, onRebuild);
+    }
+
+    async ensureAssistantTurnEnded(onRebuild) {
+      return GabCpuInferenceEngine.prototype.ensureAssistantTurnEnded.call(this, onRebuild);
+    }
+
+    _findSessionInPrompt(promptIds) {
+      return GabCpuInferenceEngine.prototype._findSessionInPrompt.call(this, promptIds);
+    }
+
+    async _appendTokens(ids, signal, onRebuild) {
+      return GabCpuInferenceEngine.prototype._appendTokens.call(this, ids, signal, onRebuild);
+    }
+
+    async _appendToken(id, signal, onRebuild) {
+      return GabCpuInferenceEngine.prototype._appendToken.call(this, id, signal, onRebuild);
+    }
+
+    async _compactSession(signal, onRebuild) {
+      return GabCpuInferenceEngine.prototype._compactSession.call(this, signal, onRebuild);
+    }
+
+    _retainedSessionIds() {
+      return GabCpuInferenceEngine.prototype._retainedSessionIds.call(this);
+    }
+
+    _noteSessionToken(id) {
+      return GabCpuInferenceEngine.prototype._noteSessionToken.call(this, id);
     }
 
     async forwardToken(tokenId, position) {

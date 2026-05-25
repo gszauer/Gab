@@ -460,6 +460,8 @@ class App {
     this.tokenizer = null;
     this.engine    = null;
     this.generating = false;
+    this.stopRequested = false;
+    this.generationAbort = null;
   }
 
   async init() {
@@ -512,10 +514,10 @@ class App {
     this.inputEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        this._handleSend();
+        if (!this.generating) this._handleSend();
       }
     });
-    this.sendBtn.addEventListener('click', () => this._handleSend());
+    this.sendBtn.addEventListener('click', () => this._handlePrimaryAction());
     for (const btn of this.downloadBtns) {
       btn.addEventListener('click', () => this._handleDownload(btn.dataset.model));
     }
@@ -620,7 +622,15 @@ class App {
   _updateSendEnabled() {
     const ready = this.appEl.dataset.state === 'ready';
     const hasText = this.inputEl.value.trim().length > 0;
-    this.sendBtn.disabled = !ready || !hasText || this.generating;
+    if (this.generating) {
+      this.sendBtn.textContent = 'Stop';
+      this.sendBtn.setAttribute('aria-label', 'Stop generation');
+      this.sendBtn.disabled = !ready || this.stopRequested;
+    } else {
+      this.sendBtn.textContent = 'Send';
+      this.sendBtn.setAttribute('aria-label', 'Send message');
+      this.sendBtn.disabled = !ready || !hasText;
+    }
   }
 
   _setDownloadButtonsDisabled(disabled) {
@@ -766,6 +776,25 @@ class App {
     return weightsBlob.arrayBuffer();
   }
 
+  _handlePrimaryAction() {
+    if (this.generating) {
+      this._stopGeneration();
+    } else {
+      this._handleSend();
+    }
+  }
+
+  _stopGeneration() {
+    if (!this.generating || this.stopRequested) return;
+    this.stopRequested = true;
+    if (this.generationAbort) this.generationAbort.abort();
+    this._updateSendEnabled();
+  }
+
+  _isAbortError(err) {
+    return err && (err.name === 'AbortError' || err.code === 20);
+  }
+
   async _handleSend() {
     const text = this.inputEl.value.trim();
     if (!text || this.generating || this.appEl.dataset.state !== 'ready') return;
@@ -773,6 +802,8 @@ class App {
     this.inputEl.value = '';
     this._autosize();
     this.generating = true;
+    this.stopRequested = false;
+    this.generationAbort = new AbortController();
     this._updateSendEnabled();
 
     // Add the user message
@@ -796,7 +827,9 @@ class App {
         maxNewTokens: CONFIG.MAX_NEW_TOKENS,
         temperature: CONFIG.TEMPERATURE,
         topK: CONFIG.TOP_K,
+        signal: this.generationAbort.signal,
       })) {
+        if (this.stopRequested) break;
         const wantRole = (kind === 'thinking') ? 'thinking' : 'assistant';
         if (!current || current.role !== wantRole) {
           if (current) {
@@ -814,15 +847,17 @@ class App {
         this.rawRenderer.appendToken(current, token);
         this._scrollToBottom();
       }
-      if (current) {
+    } catch (e) {
+      if (!this._isAbortError(e)) console.error('Generation error:', e);
+    } finally {
+      if (current && !current.complete) {
         current.complete = true;
         this.chatRenderer.finalize(current);
         this.rawRenderer.finalize(current);
       }
-    } catch (e) {
-      console.error('Generation error:', e);
-    } finally {
       this.generating = false;
+      this.stopRequested = false;
+      this.generationAbort = null;
       this._updateSendEnabled();
       this.inputEl.focus();
     }

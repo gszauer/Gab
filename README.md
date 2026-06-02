@@ -11,23 +11,6 @@ This repository contains the browser UI, JavaScript inference runtime, tokenizer
 - Fine-tuning data: [gszauer/Gab100MFinetune](https://huggingface.co/datasets/gszauer/Gab100MFinetune)
 - Blog/site: [gabormakesgames.com](https://gabormakesgames.com)
 
-## Running Locally
-
-Serve the `web` folder from a local HTTP server:
-
-```bash
-cd web
-python3 -m http.server 8765 --bind 0.0.0.0
-```
-
-Then open:
-
-```text
-http://localhost:8765/
-```
-
-The app downloads the tokenizer and one model variant on first launch, then stores them in IndexedDB. Subsequent visits load from the browser cache. To switch between model variants, open the `?` menu, choose `Reset`, delete the local model, and reload.
-
 ## Model Variants
 
 The web app offers two local model downloads:

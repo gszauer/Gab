@@ -4,7 +4,7 @@
    Config
    ========================================================================= */
 const CONFIG = {
-  RUNTIME_VERSION: 'V1',
+  RUNTIME_VERSION: 'V2',
   DB_NAME:       'gift-of-gab',
   DB_VERSION:    3,
   STORE:         'model',
@@ -12,13 +12,13 @@ const CONFIG = {
   MODELS: {
     q8: {
       name: 'Quantized',
-      button: 'Download Quantized Q8 (100 MiB)',
+      button: 'Download Quantized Q8 (96 MiB)',
       manifestUrl: 'model-q8.json',
       weightUrls: ['model-q8.bin'],
     },
     f32: {
       name: 'Full F32',
-      button: 'Download Full F32 (380 MiB)',
+      button: 'Download Full F32 (381 MiB)',
       manifestUrl: 'model-f32.json',
       weightUrls: [
         'model-f32-000.bin',
@@ -30,8 +30,8 @@ const CONFIG = {
     },
   },
 
-  MAX_CONTEXT_TOKENS: 4096,
-  MAX_NEW_TOKENS:     2048,
+  MAX_CONTEXT_TOKENS: 2048,
+  MAX_NEW_TOKENS:     1024,
   TEMPERATURE:        0.8,
   TOP_K:              50,
 };

@@ -8,8 +8,8 @@ Gab is a ~100 million parameter language model trained from scratch, along with 
 
 - Try it out: [giftofgab.chat](https://giftofgab.chat)
 - Model: [gszauer/Gab100M](https://huggingface.co/gszauer/Gab100M)
-- Pretraining data: [gszauer/Gab100MPretrain](https://huggingface.co/datasets/gszauer/Gab100MPretrain)
-- Fine-tuning data: [gszauer/Gab100MFinetune](https://huggingface.co/datasets/gszauer/Gab100MFinetune)
+- Pretraining data: [gszauer/Gab100MPretrain](https://huggingface.co/datasets/gszauer/Gab100MPretrain) and [Cosmopedia v2](https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus)
+- Fine-tuning data: [gszauer/Gab100MFinetune](https://huggingface.co/datasets/gszauer/Gab100MFinetune) and [SmolTalk](https://huggingface.co/datasets/HuggingFaceTB/smoltalk)
 - Blog/site: [gabormakesgames.com](https://gabormakesgames.com)
 
 # The Model
